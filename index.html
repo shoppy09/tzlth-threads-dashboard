@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>職涯停看聽 - Threads 數據分析儀表板</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<link rel="stylesheet" href="style.css?v=21">
+</head>
+<body>
+<div class="app">
+  <!-- Sidebar -->
+  <nav class="sidebar">
+    <div class="logo">
+      <span class="logo-icon">📊</span>
+      <span class="logo-text">Threads 分析</span>
+    </div>
+    <ul class="nav-links">
+      <li class="active" data-tab="dashboard"><span class="nav-icon">🏠</span> 總覽儀表板</li>
+      <li data-tab="input"><span class="nav-icon">✏️</span> 創作工具箱</li>
+      <li data-tab="posts"><span class="nav-icon">📋</span> 貼文列表</li>
+      <li data-tab="insights"><span class="nav-icon">💡</span> AI 洞察建議</li>
+      <li data-tab="suggest"><span class="nav-icon">🎯</span> 發文建議</li>
+      <li data-tab="health"><span class="nav-icon">🏥</span> 帳號健檢</li>
+      <li data-tab="newsletter"><span class="nav-icon">📧</span> 電子報工具</li>
+      <li data-tab="settings"><span class="nav-icon">⚙️</span> 設定</li>
+    </ul>
+    <div class="sidebar-footer">
+      <button id="exportBtn" class="btn-secondary">匯出 CSV</button>
+      <button id="importBtn" class="btn-secondary">匯入 CSV</button>
+      <button id="importApiBtn" class="btn-primary" style="font-size:12px">匯入 API 數據</button>
+      <input type="file" id="importFile" accept=".csv" style="display:none">
+      <input type="file" id="importApiFile" accept=".json" style="display:none">
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="content">
+    <div id="tokenWarning" class="warning-banner" style="display:none"></div>
+    <div id="fetchWarning" class="warning-banner warning-red" style="display:none"></div>
+    <div id="vacancyWarning" class="warning-banner" style="display:none"></div>
+
+    <!-- Tab: Dashboard -->
+    <section id="tab-dashboard" class="tab-content active">
+      <div class="page-header">
+        <h1>總覽儀表板</h1>
+        <div style="display:flex;align-items:center;gap:12px">
+          <button id="syncBtn" class="btn-primary" style="white-space:nowrap;display:flex;align-items:center;gap:6px">
+            <span id="syncIcon">🔄</span> <span id="syncText">立即同步</span>
+          </button>
+          <span id="syncStatus" style="font-size:11px;color:#8892a4"></span>
+          <button id="compareToggle" class="btn-secondary" style="white-space:nowrap;font-size:12px">📊 vs 上一期</button>
+          <select id="periodFilter">
+            <option value="7">近 7 天</option>
+            <option value="30" selected>近 30 天</option>
+            <option value="90">近 90 天</option>
+            <option value="all">全部</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- KPI Cards -->
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">期間貼文數</div>
+          <div class="kpi-value" id="kpi-posts">0</div>
+          <div class="kpi-sub" id="kpi-posts-sub">-</div>
+        </div>
+        <div class="kpi-card accent">
+          <div class="kpi-label">平均愛心數</div>
+          <div class="kpi-value" id="kpi-likes">0</div>
+          <div class="kpi-sub" id="kpi-likes-sub">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">平均留言數</div>
+          <div class="kpi-value" id="kpi-comments">0</div>
+          <div class="kpi-sub" id="kpi-comments-sub">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">平均轉發數</div>
+          <div class="kpi-value" id="kpi-reposts">0</div>
+          <div class="kpi-sub" id="kpi-reposts-sub">-</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">平均瀏覽數</div>
+          <div class="kpi-value" id="kpi-views">0</div>
+          <div class="kpi-sub" id="kpi-views-sub">-</div>
+        </div>
+        <div class="kpi-card highlight">
+          <div class="kpi-label">互動率</div>
+          <div class="kpi-value" id="kpi-engagement">0%</div>
+          <div class="kpi-sub" id="kpi-engagement-sub">（愛心+留言+轉發）/ 粉絲數</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">最佳貼文類型</div>
+          <div class="kpi-value" id="kpi-besttype">-</div>
+          <div class="kpi-sub" id="kpi-besttype-sub">-</div>
+        </div>
+      </div>
+
+      <!-- Charts Row 1 -->
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <h3>每日互動趨勢</h3>
+          <canvas id="chartTrend"></canvas>
+        </div>
+      </div>
+
+      <!-- Charts Row 2 -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>貼文類型表現</h3>
+          <canvas id="chartType"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>最佳發文時段</h3>
+          <canvas id="chartTime"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <h3>🗓️ 發文時間熱力圖（星期 × 時段）</h3>
+          <div id="heatmapContainer" style="overflow-x:auto"></div>
+        </div>
+      </div>
+
+      <!-- Charts Row 3 -->
+      <div class="chart-grid">
+        <div class="chart-card">
+          <h3>星期幾表現最好？</h3>
+          <canvas id="chartWeekday"></canvas>
+        </div>
+        <div class="chart-card">
+          <h3>互動類型分佈</h3>
+          <canvas id="chartEngagement"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-grid">
+        <div class="chart-card wide">
+          <h3>👥 粉絲成長趨勢</h3>
+          <canvas id="chartFollowers"></canvas>
+          <p id="followerNote" style="font-size:11px;color:#556;margin-top:8px"></p>
+        </div>
+      </div>
+
+      <!-- Top Posts -->
+      <div class="chart-card wide">
+        <h3>🏆 表現最佳的貼文 TOP 5</h3>
+        <div id="topPosts" class="top-posts-list"></div>
+      </div>
+
+      <div class="chart-card wide" id="viralAnalysis" style="display:none">
+        <h3>🔥 爆文分析（TOP 10% 貼文特徵）</h3>
+        <div id="viralContent" class="viral-grid"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Creator Toolkit -->
+    <section id="tab-input" class="tab-content">
+      <div class="page-header">
+        <h1>✏️ 創作工具箱</h1>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:4px">發文前的輔助工具，根據你的歷史數據給出即時建議</p>
+      </div>
+
+      <!-- Tool 1: Draft Analyzer -->
+      <div class="chart-card" style="margin-bottom:20px">
+        <h3>📝 草稿分析器</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">貼上草稿全文，即時獲得：類型預測、長度評估、關鍵字比對、最佳發文時間、相似爆文參考</p>
+        <textarea id="draftInput" rows="6" placeholder="把你準備發的貼文草稿貼在這裡（完整內文，可多段）..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <button id="analyzeDraftBtn" class="btn-primary">🔍 分析草稿</button>
+          <span id="draftCharCount" style="font-size:12px;color:var(--text-muted)">0 字</span>
+        </div>
+        <div id="draftResult" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Tool 2: Engagement Predictor -->
+      <div class="chart-card" style="margin-bottom:20px" id="predictorCard">
+        <h3>🔮 互動預測器</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:12px">輸入標題關鍵字，根據歷史相似貼文預測可能的互動數</p>
+        <div style="display:flex;gap:10px">
+          <input type="text" id="predictInput" placeholder="輸入你打算發的標題..." style="flex:1">
+          <button id="predictBtn" class="btn-primary">預測</button>
+        </div>
+        <div id="predictResult" style="margin-top:16px"></div>
+      </div>
+
+      <!-- Tool 3: Hashtag Analysis -->
+      <div class="chart-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div>
+            <h3 style="margin:0">🏷️ Hashtag 效果排行</h3>
+            <p style="font-size:13px;color:var(--text-dim);margin:4px 0 0">從歷史貼文中萃取各 Hashtag 對應的平均互動數</p>
+          </div>
+          <button id="refreshHashtags" class="btn-secondary" style="font-size:12px;padding:6px 12px">重新分析</button>
+        </div>
+        <div id="hashtagResult"><p style="color:var(--text-muted);font-size:13px">切換到此頁面時自動載入...</p></div>
+      </div>
+
+      <!-- Tool 4: Thread Splitter -->
+      <div class="chart-card" id="threadSplitterCard" style="margin-top:20px">
+        <h3>📖 長文串文轉換器</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">將 1 篇長文章（1000–5000 字）智慧切割成多篇串連的 Threads 串文，讀者在同一個串文內連續閱讀</p>
+
+        <!-- 輸入區 -->
+        <div id="tsSplitInput">
+          <textarea id="tsInput" rows="8" placeholder="貼上你的長文章內容（1000–5000 字）..." style="width:100%;box-sizing:border-box;resize:vertical;margin-bottom:12px"></textarea>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+            <span id="tsCharCount" style="font-size:12px;color:var(--text-muted)">0 字</span>
+            <span id="tsLenHint" style="font-size:11px;color:var(--text-muted)"></span>
+          </div>
+
+          <!-- 設定 -->
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:16px;padding:14px;background:var(--bg);border-radius:8px;border:1px solid #2a2a4a">
+            <div class="form-group" style="margin:0">
+              <label style="font-size:11px">每篇目標字數</label>
+              <select id="tsTargetLen">
+                <option value="200">200 字（精簡）</option>
+                <option value="300" selected>300 字（建議）</option>
+                <option value="400">400 字（較長）</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:11px">最多篇數</label>
+              <select id="tsMaxParts">
+                <option value="3">3 篇</option>
+                <option value="4">4 篇</option>
+                <option value="5" selected>5 篇</option>
+                <option value="6">6 篇</option>
+                <option value="8">8 篇</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin:0">
+              <label style="font-size:11px">第一篇風格</label>
+              <select id="tsStyle">
+                <option value="hook" selected>強力鉤子（推薦）</option>
+                <option value="suspense">懸念式開頭</option>
+                <option value="natural">保留原文開頭</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <button id="tsSplitBtn" class="btn-primary">✨ AI 智慧切割</button>
+            <span id="tsSplitStatus" style="font-size:12px;color:var(--text-muted)"></span>
+          </div>
+        </div>
+
+        <!-- 切割結果 -->
+        <div id="tsResult" style="display:none;margin-top:20px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+            <div>
+              <span style="font-size:14px;font-weight:600;color:var(--text-bright)" id="tsResultTitle"></span>
+              <span style="font-size:11px;color:var(--text-muted);margin-left:10px" id="tsResultMeta"></span>
+            </div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="tsAddPost()">+ 插入一篇</button>
+              <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="tsTogglePreview()">📱 手機預覽</button>
+              <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="tsSaveDraft()">💾 儲存草稿</button>
+              <button class="btn-primary" style="font-size:12px;padding:5px 14px" onclick="tsPublish()">🚀 發布串文</button>
+              <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('tsResult').style.display='none';document.getElementById('tsSplitInput').style.display='block'">↩ 重新輸入</button>
+            </div>
+          </div>
+
+          <!-- 串文卡片列表 -->
+          <div id="tsPostList"></div>
+
+          <!-- 發布確認與進度 -->
+          <div id="tsPublishSection" style="display:none;margin-top:20px;padding:20px;background:var(--bg);border:1px solid #2a2a4a;border-radius:10px">
+            <div id="tsPublishConfirm">
+              <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">🚀 確認發布串文</h4>
+              <div id="tsPublishSummary" style="margin-bottom:16px;font-size:13px;color:var(--text-dim)"></div>
+              <div style="padding:12px;background:#1a2a1a;border-radius:8px;border:1px solid #2a4a2a;margin-bottom:16px">
+                <p style="font-size:12px;color:#6abf69;margin-bottom:4px">✅ 發布後讀者體驗：</p>
+                <p style="font-size:11px;color:var(--text-muted)">粉絲動態牆只看到第 1 篇，點開後往下滑即可連續閱讀所有篇。</p>
+              </div>
+              <div style="padding:12px;background:#2a1a1a;border-radius:8px;border:1px solid #4a2a2a;margin-bottom:16px">
+                <p style="font-size:12px;color:var(--accent);margin-bottom:4px">⚠️ 注意事項：</p>
+                <p style="font-size:11px;color:var(--text-muted)">• 發布過程約需 <span id="tsEstTime"></span>，請勿關閉此視窗</p>
+                <p style="font-size:11px;color:var(--text-muted)">• 每篇間隔 30 秒等待 API 處理</p>
+                <p style="font-size:11px;color:var(--text-muted)">• 發布後無法透過本系統刪除，請確認內容正確</p>
+              </div>
+              <div style="display:flex;gap:10px">
+                <button class="btn-primary" onclick="tsConfirmPublish()">✅ 確認，開始發布</button>
+                <button class="btn-secondary" onclick="document.getElementById('tsPublishSection').style.display='none'">取消</button>
+              </div>
+            </div>
+            <div id="tsPublishProgress" style="display:none">
+              <h4 style="font-size:14px;font-weight:700;margin-bottom:16px">📡 發布中...</h4>
+              <div id="tsProgressSteps"></div>
+              <div style="margin-top:12px;padding:10px 14px;background:var(--bg-card2);border-radius:8px">
+                <span id="tsProgressMsg" style="font-size:13px;color:var(--text-dim)">準備中...</span>
+              </div>
+            </div>
+            <div id="tsPublishDone" style="display:none">
+              <div style="text-align:center;padding:20px 0">
+                <div style="font-size:48px;margin-bottom:12px">🎉</div>
+                <h4 style="font-size:16px;font-weight:700;margin-bottom:8px">串文發布完成！</h4>
+                <p style="font-size:13px;color:var(--text-dim);margin-bottom:16px" id="tsPublishDoneMsg"></p>
+                <a id="tsPermalink" href="#" target="_blank" class="btn-primary" style="display:none;text-decoration:none;margin-right:8px">🔗 查看串文</a>
+                <button class="btn-secondary" onclick="document.getElementById('tsPublishSection').style.display='none'">關閉</button>
+              </div>
+            </div>
+            <div id="tsPublishError" style="display:none">
+              <div style="text-align:center;padding:16px 0">
+                <div style="font-size:36px;margin-bottom:8px">❌</div>
+                <p style="font-size:13px;color:var(--accent)" id="tsPublishErrorMsg"></p>
+                <button class="btn-secondary" style="margin-top:12px" onclick="document.getElementById('tsPublishSection').style.display='none'">關閉</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 手機預覽 -->
+          <div id="tsPhonePreview" style="display:none;margin-top:20px">
+            <h4 style="font-size:13px;color:var(--text-muted);margin-bottom:12px">📱 Threads 串文預覽效果</h4>
+            <div id="tsPhoneContent" class="ts-phone-wrap"></div>
+          </div>
+        </div>
+        <!-- Token 發文權限測試 -->
+        <div style="margin-top:16px;padding:14px;background:var(--bg);border-radius:8px;border:1px dashed #2a2a4a">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <span style="font-size:12px;color:var(--text-muted)">🔑 Token 發文權限：</span>
+            <button id="tsTestPublishBtn" class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="window.tsTestPublish()">測試發文權限</button>
+            <span id="tsTestResult" style="font-size:12px;color:var(--text-muted)">點擊測試是否有發文到 Threads 的權限</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Posts -->
+    <section id="tab-posts" class="tab-content">
+      <div class="page-header">
+        <h1>貼文列表</h1>
+        <div class="filter-row">
+          <input type="text" id="searchFilter" placeholder="🔍 搜尋貼文關鍵字..." style="min-width:200px;font-size:13px">
+          <select id="typeFilter">
+            <option value="all">全部類型</option>
+            <option value="長文觀點">長文觀點</option>
+            <option value="案例故事">案例故事</option>
+            <option value="觀點短文">觀點短文</option>
+            <option value="導流CTA">導流CTA</option>
+            <option value="互動問答">互動問答</option>
+            <option value="串文">串文</option>
+          </select>
+          <select id="sortFilter">
+            <option value="date-desc">日期（新→舊）</option>
+            <option value="date-asc">日期（舊→新）</option>
+            <option value="likes-desc">愛心（高→低）</option>
+            <option value="engagement-desc">互動總數（高→低）</option>
+          </select>
+          <button id="postsExportBtn" class="btn-secondary" style="font-size:12px;padding:6px 14px;white-space:nowrap">⬇️ 匯出 CSV</button>
+          <button id="batchDeleteBtn" class="btn-secondary" style="font-size:12px;padding:6px 14px;white-space:nowrap;color:var(--accent)">🗑️ 批量刪除</button>
+        </div>
+      </div>
+      <div class="posts-table-wrapper">
+        <table id="postsTable" class="posts-table">
+          <thead>
+            <tr>
+              <th><input type="checkbox" id="selectAllPosts" title="全選/全消"></th>
+              <th>日期</th>
+              <th>類型</th>
+              <th>媒體</th>
+              <th>主題</th>
+              <th>❤️</th>
+              <th>💬</th>
+              <th>🔁</th>
+              <th>📤</th>
+              <th>👁 瀏覽</th>
+              <th>互動率</th>
+              <th>互動總數</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="postsBody"></tbody>
+        </table>
+        <div id="emptyState" class="empty-state">
+          <p>還沒有貼文數據</p>
+          <p>請點選右上角「立即同步」從 Threads API 載入貼文數據</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab: Insights -->
+    <section id="tab-insights" class="tab-content">
+      <div class="page-header">
+        <h1>💡 AI 洞察建議</h1>
+        <button id="refreshInsights" class="btn-primary">重新分析</button>
+      </div>
+      <div id="insightsContainer" class="insights-grid"></div>
+    </section>
+
+    <!-- Tab: Suggest -->
+    <section id="tab-suggest" class="tab-content">
+      <div class="page-header">
+        <h1>🎯 今日發文建議</h1>
+        <button id="refreshSuggest" class="btn-primary">重新產生</button>
+      </div>
+      <div id="suggestContainer" class="insights-grid"></div>
+    </section>
+
+    <!-- Tab: Health Check -->
+    <section id="tab-health" class="tab-content">
+      <div class="page-header">
+        <h1>🏥 帳號健檢</h1>
+        <button id="refreshHealth" class="btn-primary">重新檢測</button>
+      </div>
+      <div id="healthScoreCard" class="health-score-wrapper"></div>
+      <div id="healthDetails" class="insights-grid"></div>
+    </section>
+
+    <!-- Tab: Newsletter -->
+    <section id="tab-newsletter" class="tab-content">
+      <div class="page-header">
+        <h1>📧 電子報工具</h1>
+        <p style="color:var(--text-dim);font-size:13px;margin-top:4px">從高互動貼文自動生成電子報草稿，可直接複製貼入 Mailchimp、Substack 或任何發報平台</p>
+      </div>
+
+      <!-- Newsletter History -->
+      <div class="chart-card" id="nlHistorySection" style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <h3 style="margin:0">🗂️ 歷史草稿</h3>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('nlHistoryBody').style.display=document.getElementById('nlHistoryBody').style.display==='none'?'block':'none'">展開/收起</button>
+        </div>
+        <div id="nlHistoryBody" style="display:none">
+          <div id="nlHistoryList"></div>
+        </div>
+      </div>
+
+      <!-- Step 1: Period & Sort -->
+      <div class="chart-card" style="margin-bottom:20px">
+        <h3 style="margin-bottom:14px">⚙️ Step 1｜選擇區間與精選條件</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>開始日期</label>
+            <input type="date" id="nl-date-from">
+          </div>
+          <div class="form-group">
+            <label>結束日期</label>
+            <input type="date" id="nl-date-to">
+          </div>
+          <div class="form-group">
+            <label>精選篇數</label>
+            <select id="nl-top-n">
+              <option value="3">Top 3 篇</option>
+              <option value="5" selected>Top 5 篇</option>
+              <option value="7">Top 7 篇</option>
+              <option value="10">Top 10 篇</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>排序依據</label>
+            <select id="nl-sort-by">
+              <option value="engagement">互動數（愛心＋留言＋轉發）</option>
+              <option value="views">瀏覽數</option>
+              <option value="rate">瀏覽互動率（%）</option>
+            </select>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;align-items:center">
+          <span style="font-size:12px;color:var(--text-muted)">快速選擇：</span>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSetPreset('week')">本週</button>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSetPreset('month')">本月</button>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSetPreset('3month')">近3個月</button>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSetPreset('6month')">近半年</button>
+          <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSetPreset('year')">近一年</button>
+          <button id="nlLoadBtn" class="btn-primary" style="margin-left:auto">載入精選文章 →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Select Posts -->
+      <div class="chart-card" id="nlPostsSection" style="margin-bottom:20px;display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <h3 style="margin:0">✅ Step 2｜勾選要納入的文章</h3>
+          <div style="display:flex;gap:8px">
+            <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSelectAll(true)">全選</button>
+            <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="nlSelectAll(false)">全消</button>
+          </div>
+        </div>
+        <div id="nlPostsList"></div>
+        <div style="margin-top:14px;text-align:right">
+          <button id="nlNextBtn" class="btn-primary">下一步：設定電子報 →</button>
+        </div>
+      </div>
+
+      <!-- Step 3: AI 轉換設定 -->
+      <div class="chart-card" id="nlSettingsSection" style="margin-bottom:20px;display:none">
+        <h3 style="margin-bottom:4px">🤖 Step 3｜AI 轉換設定</h3>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">系統會對每篇選取的文章呼叫 Claude API，依照以下規則改寫為電子報內容</p>
+
+        <!-- Tab Row -->
+        <div class="nl-tab-row" style="display:flex;gap:0;border-bottom:1px solid #2a2a4a;margin-bottom:16px">
+          <button class="nl-tab nl-tab-active" data-nltab="rules" onclick="nlSwitchTab('rules')">轉換規則</button>
+          <button class="nl-tab" data-nltab="tone" onclick="nlSwitchTab('tone')">語氣 &amp; 格式</button>
+          <button class="nl-tab" data-nltab="prompt" onclick="nlSwitchTab('prompt')">Prompt 預覽</button>
+        </div>
+
+        <!-- Tab: 轉換規則 -->
+        <div id="nl-tab-rules">
+          <!-- 長短自適應（核心） -->
+          <div class="nl-rule-row" style="flex-direction:column;align-items:stretch">
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div class="nl-rule-icon nl-icon-on" id="nlicon-adapt">✓</div>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:600;color:var(--text-bright)">內容長短自適應</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">依字數自動判斷「擴寫」、「重整結構」或「精煉摘要」（核心規則）</div>
+              </div>
+              <div class="nl-toggle nl-toggle-on" id="nltoggle-adapt" onclick="nlToggleRule('adapt')"></div>
+            </div>
+            <div id="nl-adapt-detail" style="margin-top:10px;background:#0f0f1a;border-radius:8px;padding:12px;display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;align-items:flex-start;gap:8px">
+                <span style="background:#e1f5ee;color:#085041;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0">短文</span>
+                <span style="font-size:11px;color:var(--text-dim);line-height:1.6">低於閾值一 → <strong style="color:var(--text-bright)">擴寫</strong>：補充背景、案例、洞察，擴充至 200–350 字</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:8px">
+                <span style="background:#faeeda;color:#633806;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0">中篇</span>
+                <span style="font-size:11px;color:var(--text-dim);line-height:1.6">介於兩閾值之間 → <strong style="color:var(--text-bright)">重整結構</strong>：加段落標題、調語氣，不大幅增減字數</span>
+              </div>
+              <div style="display:flex;align-items:flex-start;gap:8px">
+                <span style="background:#eeedfe;color:#3c3489;font-size:11px;font-weight:600;padding:2px 9px;border-radius:6px;white-space:nowrap;flex-shrink:0">長文</span>
+                <span style="font-size:11px;color:var(--text-dim);line-height:1.6">高於閾值二 → <strong style="color:var(--text-bright)">精煉摘要</strong>：保留核心論點，濃縮為 300–500 字</span>
+              </div>
+              <!-- 隱藏的閾值輸入（供後端邏輯使用） -->
+              <input type="hidden" id="nl-thresh1" value="150">
+              <input type="hidden" id="nl-thresh2" value="500">
+              <div style="padding-top:10px;border-top:1px solid #2a2a4a">
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">快速選擇內容風格：</div>
+                <div style="display:flex;gap:8px">
+                  <button class="nl-mode-btn" id="nlmode-short" onclick="window.nlSetMode('short')">✏️ 短文擴寫</button>
+                  <button class="nl-mode-btn nl-mode-active" id="nlmode-mid" onclick="window.nlSetMode('mid')">📝 標準整理</button>
+                  <button class="nl-mode-btn" id="nlmode-long" onclick="window.nlSetMode('long')">📄 長文精華</button>
+                </div>
+                <div id="nl-mode-desc" style="font-size:11px;color:var(--text-dim);margin-top:8px;min-height:16px">標準整理：重整結構、調語氣，保持原有篇幅，適合大多數文章</div>
+              </div>
+            </div>
+          </div>
+          <div class="nl-rule-row">
+            <div class="nl-rule-icon nl-icon-on" id="nlicon-subject">✓</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-bright)">產生主旨行（件名）</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">自動生成電子報標題（件名），提升開信率</div>
+            </div>
+            <div class="nl-toggle nl-toggle-on" id="nltoggle-subject" onclick="nlToggleRule('subject')"></div>
+          </div>
+          <div class="nl-rule-row">
+            <div class="nl-rule-icon nl-icon-on" id="nlicon-cta">✓</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-bright)">加入 CTA</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">結尾加行動呼籲，引導讀者互動或回覆</div>
+            </div>
+            <div class="nl-toggle nl-toggle-on" id="nltoggle-cta" onclick="nlToggleRule('cta')"></div>
+          </div>
+          <div class="nl-rule-row">
+            <div class="nl-rule-icon nl-icon-off" id="nlicon-hashtag">–</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-bright)">移除 Hashtag</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">清除 # 標籤，關鍵字整合至內文自然提及</div>
+            </div>
+            <div class="nl-toggle" id="nltoggle-hashtag" onclick="nlToggleRule('hashtag')"></div>
+          </div>
+          <div class="nl-rule-row" style="border-bottom:none">
+            <div class="nl-rule-icon nl-icon-off" id="nlicon-greeting">–</div>
+            <div style="flex:1">
+              <div style="font-size:13px;font-weight:600;color:var(--text-bright)">加入開場問候</div>
+              <div style="font-size:11px;color:var(--text-muted);margin-top:2px">內文前加個人化問候語，拉近讀者距離</div>
+            </div>
+            <div class="nl-toggle" id="nltoggle-greeting" onclick="nlToggleRule('greeting')"></div>
+          </div>
+        </div>
+
+        <!-- Tab: 語氣 & 格式 -->
+        <div id="nl-tab-tone" style="display:none">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px">
+            <div class="form-group">
+              <label>語氣風格</label>
+              <select id="nl-tone" onchange="nlOnSettingChange()">
+                <option value="professional">專業正式</option>
+                <option value="friendly" selected>親切友善</option>
+                <option value="casual">輕鬆隨性</option>
+                <option value="inspiring">激勵啟發</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>電子報類型</label>
+              <select id="nl-type" onchange="nlOnSettingChange()">
+                <option value="weekly">週報 / 週刊</option>
+                <option value="insights" selected>洞察 / 觀點</option>
+                <option value="tips">實用技巧</option>
+                <option value="story">故事型</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>輸出語言</label>
+              <select id="nl-lang" onchange="nlOnSettingChange()">
+                <option value="zh-TW" selected>繁體中文</option>
+                <option value="zh-CN">簡體中文</option>
+                <option value="en">英文</option>
+                <option value="bilingual">中英雙語</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab: Prompt 預覽 -->
+        <div id="nl-tab-prompt" style="display:none">
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px">以第一篇選取文章為例，實際送出給 Claude 的完整 prompt：</p>
+          <pre id="nl-prompt-preview" style="font-size:11px;color:var(--text-dim);background:#0f0f1a;border:1px solid #2a2a4a;border-radius:8px;padding:14px;white-space:pre-wrap;max-height:300px;overflow-y:auto;font-family:monospace;line-height:1.6">（請先完成 Step 2 選取文章）</pre>
+        </div>
+
+        <!-- Generate Button -->
+        <div style="margin-top:20px;padding-top:16px;border-top:1px solid #2a2a4a;display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+          <button id="nlGenerateBtn" class="btn-primary" style="min-width:180px">✨ 開始 AI 轉換</button>
+          <div id="nlConvertStatus" style="font-size:12px;color:var(--text-muted)">將逐篇呼叫 Claude API 進行改寫</div>
+        </div>
+      </div>
+
+      <!-- Step 4: Preview & Export -->
+      <div class="chart-card" id="nlPreviewSection" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+          <h3 style="margin:0">👁 Step 4｜預覽與匯出</h3>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button id="nlCopyTextBtn" class="btn-secondary">📋 複製純文字</button>
+            <button id="nlDownloadHtmlBtn" class="btn-primary">⬇️ 下載 HTML 檔</button>
+            <button id="nlDownloadTxtBtn" class="btn-secondary">⬇️ 下載 TXT 檔</button>
+            <button id="nlReEditBtn" class="btn-secondary">← 重新編輯</button>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px">以下為電子報預覽（白色背景為實際 email 呈現效果）。可下載 HTML 貼入 Mailchimp / Substack 自訂 HTML 模式，或下載 TXT 直接使用。</p>
+        <div id="nlPreview" style="background:#f9f9f9;border-radius:8px;padding:4px;overflow:auto"></div>
+      </div>
+    </section>
+
+    <!-- Tab: Settings -->
+    <section id="tab-settings" class="tab-content">
+      <div class="page-header">
+        <h1>設定</h1>
+      </div>
+      <div class="settings-form">
+        <div class="form-group">
+          <label>目前粉絲數</label>
+          <input type="number" id="s-followers" value="5126">
+          <small>用於計算互動率</small>
+        </div>
+        <div class="form-group">
+          <label>帳號名稱</label>
+          <input type="text" id="s-name" value="職涯停看聽">
+        </div>
+        <button id="saveSettings" class="btn-primary">儲存設定</button>
+        <hr>
+        <h3 style="margin-top:20px">週報</h3>
+        <button id="genWeeklyReport" class="btn-primary" style="margin-top:8px">產生本週報告</button>
+        <div id="weeklyReportResult" style="margin-top:16px"></div>
+        <hr>
+        <h3>危險區域</h3>
+        <button id="clearAllData" class="btn-danger">清除所有數據</button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Full-text modal -->
+<div id="postModal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closePostModal()">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div>
+        <span id="modalType" class="modal-type-badge"></span>
+        <select id="modalTypeEdit" style="font-size:11px;background:var(--bg-card2);border:1px solid #2a2a4a;color:var(--text);border-radius:6px;padding:2px 6px;margin-left:8px">
+          <option value="長文觀點">長文觀點</option>
+          <option value="觀點短文">觀點短文</option>
+          <option value="案例故事">案例故事</option>
+          <option value="導流CTA">導流CTA</option>
+          <option value="互動問答">互動問答</option>
+          <option value="串文">串文</option>
+        </select>
+        <span id="modalDate" style="font-size:12px;color:var(--text-muted);margin-left:10px"></span>
+      </div>
+      <button onclick="closePostModal()" style="background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:0 4px;line-height:1">✕</button>
+    </div>
+    <div id="modalText" class="modal-text"></div>
+    <div id="modalStats" class="modal-stats"></div>
+    <div class="modal-notes" style="padding:10px 20px;border-top:1px solid #2a2a4a;flex-shrink:0">
+      <label style="font-size:11px;color:var(--text-muted);display:block;margin-bottom:4px">📝 個人筆記</label>
+      <textarea id="modalNotes" rows="2" placeholder="記下這篇的心得、為何爆、下次改進點..." style="width:100%;resize:vertical;font-size:12px;min-height:50px;box-sizing:border-box"></textarea>
+    </div>
+    <div id="modalLink" class="modal-link"></div>
+  </div>
+</div>
+
+<script src="app.js?v=21"></script>
+</body>
+</html>
