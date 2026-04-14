@@ -203,13 +203,17 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 > 所有對話視窗共用檔案系統。**文件是各視窗之間唯一的共用記憶。**
 
-### 每次完成任何修改後，必須執行收尾四件事：
+### ⛔ 每次完成任何修改後，必須執行收尾五件事（新增第 0 步）：
+0. **git commit + git push 到 GitHub**（此 repo：shoppy09/tzlth-threads-dashboard）
+   - 原因：總部儀表板從 GitHub API 讀取資料，本地修改不 push = 儀表板永遠看不到
+   - 必須 push 的檔案：`follower-history.json`、`threads-data.json`、任何 .js/.html/.css 修改
+   - auto-fetch.bat 已自動執行 push（2026-04-14 更新）；手動修改 Claude 必須手動 push
 1. **更新本文件「最近修改記錄」**（見下表）
 2. **更新總部任務清單**：`C:\Users\USER\Desktop\tzlth-hq\dev\tasks.md`
 3. **更新每日日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\daily-log.md`
 4. **寫入反思日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\reflection-log.md`（有實質改善價值才寫）
 
-> 未完成收尾四件事 = 任務未完成。
+> 未完成收尾五件事 = 任務未完成。本地修改不 push = 等於沒做。
 
 ### 最近修改記錄
 
@@ -222,6 +226,6 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 - 系統代號：SYS-02
 - 總部路徑：C:\Users\USER\Desktop\tzlth-hq
 - HQ 角色：Threads 內容的數據中心。追蹤發文績效、追蹤者成長、提供 AI 內容建議，支撐行銷部決策。
-- 存檔規定：auto-fetch.bat 已自動運作，無需額外存檔。手動發文時 pub-history.json 自動記錄。
+- 存檔規定：auto-fetch.bat 每次執行後自動 git commit + push（2026-04-14 起）。手動發文時 pub-history.json 自動記錄。Claude 手動修改任何檔案後必須立即 push。
 - 拉取欄位：follower-history.json（追蹤者數）、threads-data.json 最後 20 筆（近期貼文績效）、auto-fetch.log 最後幾行（確認抓取正常）
 ---
