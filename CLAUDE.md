@@ -203,18 +203,19 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 > 所有對話視窗共用檔案系統。**文件是各視窗之間唯一的共用記憶。**
 
-### 每次完成任何修改後，必須執行收尾三件事：
+### 每次完成任何修改後，必須執行收尾四件事：
 1. **更新本文件「最近修改記錄」**（見下表）
 2. **更新總部任務清單**：`C:\Users\USER\Desktop\tzlth-hq\dev\tasks.md`
 3. **更新每日日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\daily-log.md`
+4. **寫入反思日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\reflection-log.md`（有實質改善價值才寫）
 
-> 未完成收尾三件事 = 任務未完成。
+> 未完成收尾四件事 = 任務未完成。
 
 ### 最近修改記錄
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
-| （每次修改後填入此表） | | | |
+| 2026-04-14 | fetch-threads.js 新增步驟 6：auto-fetch 排程呼叫 threads_insights endpoint 抓取 followers_count，寫入 follower-history.json；修復 6 天未更新問題 | 開發部 | ✅ |
 
 ---
 ## 總部連結（TZLTH-HQ）

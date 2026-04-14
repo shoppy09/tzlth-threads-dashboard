@@ -151,6 +151,30 @@ async function main() {
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2), 'utf-8');
   console.log(`\n💾 數據已儲存到: ${outputPath}`);
   console.log('   請在儀表板中點「匯入 API 數據」載入');
+
+  // 6. 追蹤者數歷史記錄
+  console.log('\n👥 取得追蹤者數...');
+  try {
+    const fcRes = await get(`${BASE}/me/threads_insights?metric=followers_count&access_token=${TOKEN}`);
+    const fcData = (fcRes.data || []).find(d => d.name === 'followers_count');
+    const count = fcData?.total_value?.value || fcData?.values?.[0]?.value || 0;
+
+    if (count > 0) {
+      const followerLogPath = path.join(__dirname, 'follower-history.json');
+      let followerHistory = [];
+      try { followerHistory = JSON.parse(fs.readFileSync(followerLogPath, 'utf-8')); } catch {}
+      const todayStr = new Date().toISOString().split('T')[0];
+      const existing = followerHistory.findIndex(h => h.date === todayStr);
+      if (existing >= 0) followerHistory[existing].followers = count;
+      else followerHistory.push({ date: todayStr, followers: count });
+      fs.writeFileSync(followerLogPath, JSON.stringify(followerHistory, null, 2), 'utf-8');
+      console.log(`   ✅ 追蹤者數：${count.toLocaleString()}（已寫入 follower-history.json）`);
+    } else {
+      console.log('   ⚠️  追蹤者數為 0 或無法取得，跳過寫入');
+    }
+  } catch (err) {
+    console.error(`   ❌ 追蹤者數抓取失敗：${err.message}`);
+  }
 }
 
 main().catch(err => {
