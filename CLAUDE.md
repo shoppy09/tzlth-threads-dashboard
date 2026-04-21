@@ -9,9 +9,9 @@
 - **部署平台**：Vercel（Serverless Functions，api/ 目錄）+ GitHub Actions（cron 資料同步）
 - **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
 - **資料同步**：GitHub Actions cron（每日台灣時間 10:00 / 22:00）自動執行 fetch-threads.js，commit threads-data.json + follower-history.json 至 repo
-- **資料讀取**：Vercel Functions 透過 GITHUB_PAT 從私有 repo raw URL 讀取（方案 B，保持 repo 私有）
+- **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；GITHUB_PAT 可選，預防未來轉 private）
 - **AI**：Google Gemini API（gemini-2.5-flash），直接 HTTPS 呼叫
-- **線上 URL**：部署後更新（npx vercel --prod 輸出）
+- **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定
 - **Vercel 環境變數（必填）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）
