@@ -1549,113 +1549,38 @@ document.getElementById('periodFilter').addEventListener('change', debounce(refr
 
 // ===== Sync Button =====
 // 同步進度輪詢
-let _syncProgressInterval = null;
-function startProgressPolling() {
-  _syncProgressInterval = setInterval(async () => {
-    try {
-      const prog = await fetch('/api/sync-progress').then(r => r.json());
-      if (prog.message) {
-        document.getElementById('syncText').textContent = prog.message;
-      }
-      if (!prog.syncing) {
-        stopProgressPolling();
-      }
-    } catch {}
-  }, 1500);
-}
-function stopProgressPolling() {
-  if (_syncProgressInterval) { clearInterval(_syncProgressInterval); _syncProgressInterval = null; }
-}
-
-document.getElementById('syncBtn').addEventListener('click', async (e) => {
+document.getElementById('syncBtn').addEventListener('click', async () => {
   const btn = document.getElementById('syncBtn');
   const icon = document.getElementById('syncIcon');
   const text = document.getElementById('syncText');
   const status = document.getElementById('syncStatus');
 
-  // Shift+click 觸發全量同步，一般點擊使用增量同步
-  const mode = e.shiftKey ? 'full' : 'incremental';
-
-  // Disable button & show loading
   btn.disabled = true;
   btn.style.opacity = '0.6';
   icon.textContent = '⏳';
-  text.textContent = mode === 'incremental' ? '增量同步中...' : '完整同步中...';
-  status.textContent = mode === 'incremental'
-    ? '正在抓取新貼文（增量模式）...'
-    : '正在從 Threads API 全量抓取數據，這可能需要 2-3 分鐘...';
-
-  startProgressPolling();
+  text.textContent = '同步中…';
+  status.textContent = '正在觸發 GitHub Actions...';
 
   try {
-    const res = await fetch(`/api/sync?mode=${mode}`);
-    const result = await res.json();
-
-    if (result.status === 'success' && result.data) {
-      // 載入新數據
-      const imported = result.data.posts.map((p, i) => ({
-        id: p.id || String(i),
-        date: p.date || '',
-        time: p.time || '12:00',
-        type: p.type || '純文字',
-        media: p.media || '純文字',
-        title: p.title || '',
-        fullText: p.fullText || '',
-        isQuotePost: p.isQuotePost || false,
-        likes: p.likes || 0,
-        comments: p.comments || 0,
-        reposts: p.reposts || 0,
-        shares: p.shares || 0,
-        views: p.views || 0,
-        hashtags: '',
-        notes: '',
-        permalink: p.permalink || '',
-      }));
-
-      posts = imported;
-      posts = classifyAllPosts(posts);
-      savePosts(posts);
-      localStorage.setItem('threads_last_fetched', result.fetchedAt);
-
-      if (result.data.profile) {
-        settings.name = result.data.profile.name || settings.name;
-        saveSettings(settings);
-      }
-
-      icon.textContent = '✅';
-      text.textContent = '同步完成';
-      const toastMsg = result.mode === 'incremental'
-        ? `✅ 新增 ${result.newPosts} 篇｜共 ${result.totalPosts} 篇（${result.elapsed}）`
-        : `✅ 已同步 ${result.totalPosts} 篇（${result.elapsed}）`;
-      status.textContent = toastMsg.replace('✅ ', '');
-      showToast(toastMsg);
-      refreshDashboard();
-    } else if (result.status === 'syncing') {
-      icon.textContent = '⏳';
-      text.textContent = '同步中';
-      status.textContent = '另一個同步正在進行中，請稍候...';
-    } else {
-      throw new Error(result.error || '同步失敗');
-    }
-  } catch (err) {
+    const res = await fetch('/api/trigger-sync');
+    const data = await res.json();
+    icon.textContent = '✅';
+    text.textContent = data.triggered ? '已觸發' : '已更新';
+    status.textContent = data.triggered
+      ? '已觸發 GitHub Actions，3-5 分鐘後更新'
+      : '資料每日 10:00 / 22:00（台灣時間）自動更新';
+  } catch (e) {
     icon.textContent = '❌';
-    text.textContent = '同步失敗';
-    if (err.message === 'Failed to fetch') {
-      status.textContent = '無法連線到伺服器。請用 start-dashboard.bat 啟動儀表板';
-    } else {
-      status.textContent = '錯誤: ' + err.message;
-    }
-  } finally {
-    stopProgressPolling();
+    text.textContent = '失敗';
+    status.textContent = e.message;
   }
 
-  // 3 秒後恢復按鈕
   setTimeout(() => {
     btn.disabled = false;
     btn.style.opacity = '1';
     icon.textContent = '🔄';
     text.textContent = '立即同步';
-  }, 3000);
+  }, 5000);
 });
 
 // ===== Compare Toggle =====
@@ -1669,9 +1594,9 @@ document.getElementById('compareToggle').addEventListener('click', function() {
 
 // ===== Auto-load from threads-data.json =====
 function autoLoadApiData() {
-  fetch('threads-data.json')
+  fetch('/api/threads-data')
     .then(r => {
-      if (!r.ok) throw new Error('no file');
+      if (!r.ok) throw new Error('no data');
       return r.json();
     })
     .then(data => {
@@ -2829,63 +2754,52 @@ window.tsConfirmPublish = async function() {
   }
 
   try {
-    // 呼叫發布 API
-    const res = await fetch('/api/publish-thread', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ posts: tsPostsData.map(p => ({ seq: p.seq, text: p.text })) })
-    });
+    let replyToId = null;
+    let userId = null;
+    let firstPermalink = null;
 
-    if (res.status !== 202) {
-      const data = await res.json();
-      throw new Error(data.error || '發布請求失敗');
+    for (let i = 0; i < tsPostsData.length; i++) {
+      // 更新 UI：發布中
+      const iconEl = document.getElementById('tsstep_icon_' + i);
+      const statusEl = document.getElementById('tsstep_status_' + i);
+      const stepEl = document.getElementById('tsstep_' + i);
+      if (iconEl) iconEl.textContent = '📡';
+      if (statusEl) { statusEl.textContent = '發布中（30 秒）'; statusEl.style.color = 'var(--blue)'; }
+      if (msgEl) msgEl.textContent = `發布第 ${i + 1} / ${tsPostsData.length} 篇...`;
+
+      const postRes = await fetch('/api/publish-single', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: tsPostsData[i].text, replyToId, userId })
+      });
+
+      if (!postRes.ok) {
+        const errData = await postRes.json();
+        throw new Error(`第 ${i + 1} 篇失敗：${errData.error}`);
+      }
+
+      const data = await postRes.json();
+      replyToId = data.postId;
+      userId = data.userId;
+      if (i === 0 && data.permalink) firstPermalink = data.permalink;
+
+      // 更新 UI：完成
+      if (iconEl) iconEl.textContent = '✅';
+      if (statusEl) { statusEl.textContent = '完成'; statusEl.style.color = 'var(--green)'; }
+      if (stepEl) stepEl.style.background = 'rgba(39,174,96,.08)';
     }
 
-    // 開始 polling 進度
-    let pollInterval = setInterval(async () => {
-      try {
-        const prog = await fetch('/api/publish-progress').then(r => r.json());
-
-        if (msgEl) msgEl.textContent = prog.message || '';
-
-        // 更新步驟圖示
-        for (let i = 0; i < tsPostsData.length; i++) {
-          const icon = document.getElementById('tsstep_icon_' + i);
-          const status = document.getElementById('tsstep_status_' + i);
-          if (!icon || !status) continue;
-          if (i < prog.current) {
-            icon.textContent = '✅';
-            status.textContent = '完成';
-            status.style.color = 'var(--green)';
-            document.getElementById('tsstep_' + i).style.background = 'rgba(39,174,96,.08)';
-          } else if (i === prog.current && prog.status === 'publishing') {
-            icon.textContent = '📡';
-            status.textContent = '發布中';
-            status.style.color = 'var(--blue)';
-          }
-        }
-
-        if (prog.status === 'done') {
-          clearInterval(pollInterval);
-          progress.style.display = 'none';
-          done.style.display = 'block';
-          const doneMsg = document.getElementById('tsPublishDoneMsg');
-          if (doneMsg) doneMsg.textContent = `${prog.total} 篇串文已成功發布到 Threads！`;
-          const link = document.getElementById('tsPermalink');
-          if (link && prog.firstPermalink) {
-            link.href = prog.firstPermalink;
-            link.style.display = 'inline-block';
-          }
-          showToast(`🎉 串文發布完成！共 ${prog.total} 篇`);
-        } else if (prog.status === 'error') {
-          clearInterval(pollInterval);
-          progress.style.display = 'none';
-          error.style.display = 'block';
-          const errMsg = document.getElementById('tsPublishErrorMsg');
-          if (errMsg) errMsg.textContent = prog.message || '發布失敗，請重試';
-        }
-      } catch {}
-    }, 2000);
+    // 全部完成
+    progress.style.display = 'none';
+    done.style.display = 'block';
+    const doneMsg = document.getElementById('tsPublishDoneMsg');
+    if (doneMsg) doneMsg.textContent = `${tsPostsData.length} 篇串文已成功發布到 Threads！`;
+    const link = document.getElementById('tsPermalink');
+    if (link && firstPermalink) {
+      link.href = firstPermalink;
+      link.style.display = 'inline-block';
+    }
+    showToast(`🎉 串文發布完成！共 ${tsPostsData.length} 篇`);
 
   } catch (err) {
     progress.style.display = 'none';

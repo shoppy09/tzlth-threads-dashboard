@@ -6,16 +6,19 @@
 
 ## 技術架構
 - **前端**：純 HTML/CSS/JS（index.html, style.css, app.js）
-- **後端**：Node.js + Express 5（server.js），port 3939
-- **資料**：localStorage（瀏覽器端）+ threads-data.json（本地檔案）
+- **部署平台**：Vercel（Serverless Functions，api/ 目錄）+ GitHub Actions（cron 資料同步）
+- **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
+- **資料同步**：GitHub Actions cron（每日台灣時間 10:00 / 22:00）自動執行 fetch-threads.js，commit threads-data.json + follower-history.json 至 repo
+- **資料讀取**：Vercel Functions 透過 GITHUB_PAT 從私有 repo raw URL 讀取（方案 B，保持 repo 私有）
 - **AI**：Google Gemini API（gemini-2.5-flash），直接 HTTPS 呼叫
-- **啟動**：雙擊 start-dashboard.bat 或在 CMD 執行 node server.js
+- **線上 URL**：部署後更新（npx vercel --prod 輸出）
 
 ## 重要設定
-- HOST = 'localhost'（同時支援 IPv4/IPv6，解決過 127.0.0.1 只接 IPv4 的問題）
-- .env 存放：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY
-- 前端 cache 版本：目前 v=21（index.html 中 app.js 和 style.css 的 querystring）
-- Newsletter API 路由：POST /api/nl-convert（不是 /api/newsletter/convert，Express 5 多層路徑有問題）
+- **Vercel 環境變數（必填）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）
+- **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
+- **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；GitHub auto-deploy 停用
+- **GitHub Actions secret**：THREADS_ACCESS_TOKEN（Settings → Secrets and variables → Actions）
+- Newsletter API 路由：POST /api/nl-convert
 
 ## 檔案結構
 ```
@@ -116,8 +119,9 @@ curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
 - **Error Boundaries**：generateInsights/Health/Suggestions 用 try-catch 包裝，錯誤時顯示友善訊息
 
 ## syncBtn 操作說明
-- 一般點擊 → 增量同步（只抓新貼文，速度快）
-- Shift + 點擊 → 完整同步（全量重抓，用於數據異常時）
+- 點擊 → 觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT env var）
+- 若未設定 GITHUB_PAT → 顯示「資料每日 10:00 / 22:00 自動更新」說明訊息
+- 資料更新由 cron.yml 每日自動執行，無需手動觸發
 
 ## 新增功能（v20 升級）— 長文串文轉換器
 
@@ -160,38 +164,46 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 - 每篇結尾自動附加 (N/總篇數)
 - 進度條：綠色（≤380字）→ 橘色（381-450字）→ 紅色（>450字，接近 500 字 API 上限）
 
-## 新增功能（v21 升級）— 串文發布系統
+## 新增功能（v21 升級）— 串文發布系統（Vercel 版）
 
-### 新增端點
+### API 端點（api/ 目錄，Vercel Serverless Functions）
 - `GET /api/test-publish`：建立測試 container 驗證 Token 是否有 `threads_content_publish` 權限（不實際發布）
-- `POST /api/publish-thread`：接收 `{posts:[{seq,text}]}` 非同步發布串文，回傳 202 後背景執行
-- `GET /api/publish-progress`：輪詢發布進度，回傳 `{isPublishing, status, current, total, message, firstPermalink}`
+- `POST /api/publish-single`：發布單篇貼文（~32s，含 30s sleep）；前端依序呼叫實現串文發布
+- `GET /api/token-check`：快速確認 THREADS_ACCESS_TOKEN 是否已設定
+- `GET /api/fetch-log`：回傳 GitHub Actions 同步說明（非 filesystem log）
+- `GET /api/weekly-report`：從私有 repo 讀取 threads-data.json 計算週報
+- `POST /api/nl-convert`：Gemini 自然語言轉換
+- `POST /api/ai-split-thread`：Gemini 長文串文切割
+- `GET /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT）
+- `GET /api/threads-data`：從私有 repo 代理讀取 threads-data.json（GITHUB_PAT auth）
+- `GET /api/followers`：從私有 repo 代理讀取 follower-history.json（GITHUB_PAT auth）
 
-### 串文發布流程（server.js）
+### 串文發布流程（Vercel 架構）
 ```
-for each post:
-  1. POST /{userId}/threads (media_type=TEXT, reply_to_id=前一篇id)
-  2. sleep(30000)  ← API 處理時間
-  3. POST /{userId}/threads_publish (creation_id=containerId)
-  4. 取得 permalink
-  5. sleep(2000)   ← 避免速率限制
-完成後寫入 pub-history.json
+前端 for loop:
+  POST /api/publish-single { text, replyToId, userId }
+    → Step 1: GET /me 取 userId（僅第一篇）
+    → Step 2: POST /{userId}/threads (container)
+    → Step 3: sleep(30000)  ← vercel.json maxDuration:60 確保不 timeout
+    → Step 4: POST /{userId}/threads_publish
+    → Step 5: GET permalink（選用）
+    ← 回傳 { postId, userId, permalink }
+  replyToId = postId  ← 傳給下一篇
 ```
 
 ### 前端互動流程（app.js）
 - `window.tsPublish()`：同步 textarea 內容、驗證字數、顯示確認摘要
-- `window.tsConfirmPublish()`：呼叫 POST /api/publish-thread → 每 2 秒 polling /api/publish-progress → 即時更新步驟列表
+- `window.tsConfirmPublish()`：sequential await loop 呼叫 /api/publish-single，即時更新步驟列表
 - `window.tsTestPublish()`：呼叫 GET /api/test-publish，顯示 Token 是否有發文權限
 
-### 發布歷史
-寫入 `pub-history.json`（最多 50 筆），欄位：publishedAt, type, totalParts, firstText, postIds, permalink
+### 注意
+- pub-history.json 在 Vercel 無 filesystem，MVP 跳過（不影響核心發文）
+- 移除：/api/publish-thread（202 async，Vercel 不支援）
+- 移除：/api/publish-progress（SSE，Vercel 不支援長連線）
+- 移除：/api/sync（本機 Express 端點）、/api/sync-progress（SSE）
 
 ### 使用前提
 Token 必須有 `threads_content_publish` scope，可用「測試發文權限」按鈕驗證
-
-### ✅ 已驗證（2026-04-10）
-- Token 已包含 `threads_content_publish` 權限，測試發文成功
-- 正確開啟網址：**http://localhost:3939**（不是 8765 或其他 port）
 
 ## 待改進項目
 - 串文（isQuotePost）判斷依賴 Threads API is_quote_post 欄位
@@ -220,6 +232,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
 | 2026-04-14 | fetch-threads.js 新增步驟 6：auto-fetch 排程呼叫 threads_insights endpoint 抓取 followers_count，寫入 follower-history.json；修復 6 天未更新問題 | 開發部 | ✅ |
+| 2026-04-21 | 遷移至 Vercel + GitHub Actions：新增 12 個 api/*.js（threads-data/followers/weekly-report/nl-convert/ai-split-thread/token-check/fetch-log/test-publish/publish-single/trigger-sync）+ .github/workflows/cron.yml + vercel.json；app.js 移除 SSE polling、改 sequential publish loop、autoLoadApiData 改 /api/threads-data；server.js 保留本機開發用 | 開發部 | ✅ |
 
 ---
 ## 總部連結（TZLTH-HQ）
