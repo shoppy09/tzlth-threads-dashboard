@@ -1,12 +1,12 @@
 {
   "version": 2,
   "github": { "enabled": false },
+  "buildCommand": "echo 'no build'",
+  "outputDirectory": ".",
+  "framework": null,
   "functions": {
     "api/publish-single.js": { "maxDuration": 60 },
     "api/nl-convert.js": { "maxDuration": 30 },
     "api/ai-split-thread.js": { "maxDuration": 30 }
-  },
-  "rewrites": [
-    { "source": "/((?!api/).*)", "destination": "/index.html" }
-  ]
+  }
 }
