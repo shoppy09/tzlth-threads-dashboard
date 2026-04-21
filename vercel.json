@@ -6,10 +6,9 @@
     "api/nl-convert.js": { "maxDuration": 30 },
     "api/ai-split-thread.js": { "maxDuration": 30 }
   },
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/style.css", "dest": "/style.css" },
-    { "src": "/app.js", "dest": "/app.js" },
-    { "src": "/(.*)", "dest": "/index.html" }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/:path*" },
+    { "source": "/:file(.*\\.(css|js|json|png|jpg|ico|svg|woff|woff2|ttf))", "destination": "/:file" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
