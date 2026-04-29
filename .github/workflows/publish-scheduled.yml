@@ -1,0 +1,30 @@
+name: Publish Scheduled Threads Posts
+
+on:
+  schedule:
+    # Every 30 minutes (UTC). 台灣時間 = UTC+8
+    - cron: '*/30 * * * *'
+  workflow_dispatch:   # 手動觸發，供測試使用
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # 允許寫回 scheduled-posts.json
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install python-dateutil
+
+      - name: Publish due scheduled posts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+        run: python scripts/publish_scheduled.py

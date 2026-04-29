@@ -78,7 +78,7 @@ document.querySelectorAll('.nav-links li').forEach(li => {
     if (tab === 'insights') generateInsights();
     if (tab === 'suggest') generateSuggestions();
     if (tab === 'health') generateHealthCheck();
-    if (tab === 'input') renderHashtagAnalysis();
+    if (tab === 'input') { renderHashtagAnalysis(); schedInitTimePicker(); schedLoadQueue(); }
     if (tab === 'newsletter') nlInit();
   });
 });
@@ -3396,3 +3396,162 @@ document.getElementById('nlReEditBtn')?.addEventListener('click', () => {
   document.getElementById('nlPreviewSection').style.display = 'none';
   document.getElementById('nlSettingsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
+
+
+// ===== 排程發文功能（Tool 5 + 已排程佇列）=====
+
+/** 初始化排程時間選擇器：設定 min 為現在 + 20 分鐘 */
+function schedInitTimePicker() {
+  const input = document.getElementById('schedTime');
+  if (!input) return;
+  const minTime = new Date(Date.now() + 20 * 60 * 1000);
+  const pad = n => String(n).padStart(2, '0');
+  const localStr = `${minTime.getFullYear()}-${pad(minTime.getMonth()+1)}-${pad(minTime.getDate())}T${pad(minTime.getHours())}:${pad(minTime.getMinutes())}`;
+  input.min = localStr;
+  // Pre-fill with tomorrow 09:00 as a sensible default
+  const tomorrow = new Date(minTime);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+  const tStr = `${tomorrow.getFullYear()}-${pad(tomorrow.getMonth()+1)}-${pad(tomorrow.getDate())}T09:00`;
+  if (!input.value) input.value = tStr;
+}
+
+// 字數計算
+document.getElementById('schedContent')?.addEventListener('input', function() {
+  const count = this.value.length;
+  const el = document.getElementById('schedCharCount');
+  if (el) {
+    el.textContent = count;
+    el.style.color = count > 500 ? 'var(--accent)' : 'var(--text-muted)';
+  }
+});
+
+/** 提交排程 */
+async function schedSubmit() {
+  const content = document.getElementById('schedContent').value.trim();
+  const replyText = document.getElementById('schedReply').value.trim();
+  const schedTimeVal = document.getElementById('schedTime').value;
+  const statusEl = document.getElementById('schedStatus');
+
+  if (!content) { statusEl.textContent = '❌ 請輸入貼文內容'; return; }
+  if (content.length > 500) { statusEl.textContent = '❌ 貼文超過 500 字'; return; }
+  if (!schedTimeVal) { statusEl.textContent = '❌ 請選擇排程時間'; return; }
+
+  // Client-side validation (20-min minimum)
+  const scheduledAt = new Date(schedTimeVal);
+  const minTime = new Date(Date.now() + 20 * 60 * 1000);
+  if (scheduledAt < minTime) { statusEl.textContent = '❌ 排程時間至少 20 分鐘後'; return; }
+
+  statusEl.textContent = '⏳ 排程中...';
+
+  try {
+    const resp = await fetch('/api/schedule-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        content,
+        reply_text: replyText || null,
+        scheduled_at: scheduledAt.toISOString()
+      })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || '排程失敗');
+
+    statusEl.textContent = '✅ 已加入排程！';
+    document.getElementById('schedContent').value = '';
+    document.getElementById('schedReply').value = '';
+    const charEl = document.getElementById('schedCharCount');
+    if (charEl) charEl.textContent = '0';
+    schedInitTimePicker(); // Reset to default time
+    schedLoadQueue();
+    setTimeout(() => { statusEl.textContent = ''; }, 3000);
+  } catch (e) {
+    statusEl.textContent = `❌ ${e.message}`;
+  }
+}
+
+/** 取消排程 */
+async function schedCancel(id) {
+  if (!confirm('確定取消這個排程？')) return;
+  try {
+    const resp = await fetch('/api/cancel-scheduled', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id })
+    });
+    const data = await resp.json();
+    if (!resp.ok) throw new Error(data.error || '取消失敗');
+    showToast('✅ 排程已取消');
+    schedLoadQueue();
+  } catch (e) {
+    showToast(`❌ ${e.message}`);
+  }
+}
+
+/** 載入已排程佇列 */
+async function schedLoadQueue() {
+  const container = document.getElementById('schedQueue');
+  if (!container) return;
+  container.innerHTML = '<p style="color:var(--text-muted);font-size:13px">載入中...</p>';
+
+  try {
+    const resp = await fetch('/api/get-scheduled');
+    const posts = await resp.json();
+    if (!resp.ok) throw new Error(posts.error || '載入失敗');
+
+    if (!Array.isArray(posts) || posts.length === 0) {
+      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px">目前沒有排程貼文</p>';
+      return;
+    }
+
+    const pending = posts.filter(p => p.status === 'pending');
+    const history = posts.filter(p => p.status !== 'pending');
+
+    const formatTime = iso => {
+      const d = new Date(iso);
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    };
+
+    const statusBadge = status => {
+      const map = {
+        pending:   ['⏳ 待發布', '#1a2a4a', '#6ab4ff'],
+        published: ['✅ 已發布', '#1a3a1a', '#6abf69'],
+        failed:    ['❌ 失敗',   '#3a1a1a', '#ff6b6b'],
+        cancelled: ['🚫 已取消', '#252525', '#888888']
+      };
+      const [label, bg, color] = map[status] || ['?', '#333', '#aaa'];
+      return `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${bg};color:${color};font-weight:600;white-space:nowrap">${label}</span>`;
+    };
+
+    const renderPost = p => `
+      <div style="padding:12px 4px;border-bottom:1px solid #1a1a2e;display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1;min-width:0">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+            ${statusBadge(p.status)}
+            <span style="font-size:11px;color:var(--text-muted)">排程：${formatTime(p.scheduled_at)}</span>
+            ${p.published_at ? `<span style="font-size:11px;color:var(--text-muted)">發布：${formatTime(p.published_at)}</span>` : ''}
+          </div>
+          <p style="font-size:13px;color:var(--text-dim);margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-wrap">${p.content.replace(/&/g,'&amp;').replace(/</g,'&lt;')}</p>
+          ${p.reply_text ? `<p style="font-size:11px;color:var(--text-muted);margin:4px 0 0">💬 留言：${p.reply_text.substring(0,60).replace(/</g,'&lt;')}${p.reply_text.length>60?'...':''}</p>` : ''}
+          ${p.error ? `<p style="font-size:11px;color:#ff6b6b;margin:4px 0 0">錯誤：${String(p.error).replace(/</g,'&lt;')}</p>` : ''}
+        </div>
+        ${p.status === 'pending' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0" onclick="schedCancel('${p.id}')">取消</button>` : ''}
+      </div>
+    `;
+
+    let html = '';
+    if (pending.length) {
+      html += `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;letter-spacing:.5px">待發布 (${pending.length})</div>`;
+      html += pending.map(renderPost).join('');
+    }
+    if (history.length) {
+      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:${pending.length?'16px':'0'};margin-bottom:8px;font-weight:600;letter-spacing:.5px">最近記錄</div>`;
+      html += history.map(renderPost).join('');
+    }
+
+    container.innerHTML = html;
+  } catch (e) {
+    container.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`;
+  }
+}

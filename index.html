@@ -327,6 +327,47 @@
           </div>
         </div>
       </div>
+
+      <!-- Tool 5: 排程發文 -->
+      <div class="chart-card" style="margin-top:20px">
+        <h3>🗓️ 排程發文</h3>
+        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">設定未來發布時間，系統自動排程發佈（精度 ±30 分鐘，至少 20 分鐘後）</p>
+
+        <div class="form-group">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">貼文內容</label>
+          <textarea id="schedContent" rows="5" placeholder="輸入貼文內容（最多 500 字）..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+          <div style="text-align:right;font-size:11px;margin-top:4px"><span id="schedCharCount" style="color:var(--text-muted)">0</span><span style="color:var(--text-muted)"> / 500</span></div>
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">第一則留言（選填）</label>
+          <textarea id="schedReply" rows="2" placeholder="可選填，發布主文後自動補充第一則留言..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-top:12px">
+          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">排程時間（台灣時間）</label>
+          <input type="datetime-local" id="schedTime" style="background:var(--bg-card2);border:1px solid #2a2a4a;color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+          <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px">⏰ 至少 20 分鐘後｜精度 ±30 分鐘（每 30 分鐘自動檢查一次）</small>
+        </div>
+
+        <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <button class="btn-primary" onclick="schedSubmit()">🗓️ 加入排程</button>
+          <span id="schedStatus" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+      </div>
+
+      <!-- 已排程佇列 -->
+      <div class="chart-card" style="margin-top:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div>
+            <h3 style="margin:0">📋 已排程佇列</h3>
+            <p style="font-size:13px;color:var(--text-dim);margin:4px 0 0">待發布 + 最近 30 天歷史記錄</p>
+          </div>
+          <button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="schedLoadQueue()">🔄 重新整理</button>
+        </div>
+        <div id="schedQueue"><p style="color:var(--text-muted);font-size:13px">切換到此頁面時自動載入...</p></div>
+      </div>
+
     </section>
 
     <!-- Tab: Posts -->
@@ -687,6 +728,6 @@
   </div>
 </div>
 
-<script src="app.js?v=21"></script>
+<script src="app.js?v=22"></script>
 </body>
 </html>
