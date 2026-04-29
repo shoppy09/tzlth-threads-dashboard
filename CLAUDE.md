@@ -16,7 +16,7 @@
 ## 重要設定
 - **Vercel 環境變數（必填）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）
 - **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
-- **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 已廢棄被 Vercel 忽略，**git push 仍會觸發自動部署**（2026-04-29 IMP-088 確認）；正確停用方式：Project Settings → Git → Ignored Build Step → `exit 1`（等 Tim 確認後設定）
+- **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 為廢棄設定已無效；**自動部署已透過 Ignored Build Step（Don't build anything / exit 0）正確停用**（2026-04-29 實際設定完成）
 - **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額。新增任何 api/*.js 前必須先確認總數不超過 12
 - **GitHub Actions secret**：THREADS_ACCESS_TOKEN（Settings → Secrets and variables → Actions）
 - Newsletter API 路由：POST /api/nl-convert
