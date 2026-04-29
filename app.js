@@ -3445,7 +3445,7 @@ async function schedSubmit() {
   statusEl.textContent = '⏳ 排程中...';
 
   try {
-    const resp = await fetch('/api/schedule-post', {
+    const resp = await fetch('/api/scheduled', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -3474,8 +3474,8 @@ async function schedSubmit() {
 async function schedCancel(id) {
   if (!confirm('確定取消這個排程？')) return;
   try {
-    const resp = await fetch('/api/cancel-scheduled', {
-      method: 'POST',
+    const resp = await fetch('/api/scheduled', {
+      method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     });
@@ -3495,7 +3495,7 @@ async function schedLoadQueue() {
   container.innerHTML = '<p style="color:var(--text-muted);font-size:13px">載入中...</p>';
 
   try {
-    const resp = await fetch('/api/get-scheduled');
+    const resp = await fetch('/api/scheduled');
     const posts = await resp.json();
     if (!resp.ok) throw new Error(posts.error || '載入失敗');
 
