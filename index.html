@@ -260,6 +260,7 @@
               <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="tsTogglePreview()">📱 手機預覽</button>
               <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="tsSaveDraft()">💾 儲存草稿</button>
               <button class="btn-primary" style="font-size:12px;padding:5px 14px" onclick="tsPublish()">🚀 發布串文</button>
+              <button class="btn-secondary" style="font-size:12px;padding:5px 14px" onclick="tsScheduleOpen()">🗓️ 排程發布</button>
               <button class="btn-secondary" style="font-size:12px;padding:5px 12px" onclick="document.getElementById('tsResult').style.display='none';document.getElementById('tsSplitInput').style.display='block'">↩ 重新輸入</button>
             </div>
           </div>
@@ -312,6 +313,22 @@
             </div>
           </div>
 
+          <!-- 排程發布面板 -->
+          <div id="tsScheduleSection" style="display:none;margin-top:20px;padding:20px;background:var(--bg);border:1px solid #2a2a4a;border-radius:10px">
+            <h4 style="font-size:14px;font-weight:700;margin-bottom:12px">🗓️ 排程發布串文</h4>
+            <div id="tsScheduleSummary" style="font-size:13px;color:var(--text-dim);margin-bottom:14px"></div>
+            <div style="padding:10px 12px;background:#1a1a2a;border-radius:8px;border:1px solid #2a2a4a;margin-bottom:14px">
+              <p style="font-size:11px;color:var(--text-muted);margin:0">⏱ 精度 ±30 分鐘（GitHub Actions 每 30 分鐘觸發一次）｜至少 20 分鐘後</p>
+            </div>
+            <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">預定發布時間（瀏覽器本地時區）</label>
+            <input type="datetime-local" id="tsSchedTime" style="background:var(--bg-card2);border:1px solid #2a2a4a;color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
+            <div style="margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+              <button class="btn-primary" id="tsScheduleBtn" onclick="tsScheduleSubmit(this)">✅ 確認加入排程</button>
+              <button class="btn-secondary" onclick="document.getElementById('tsScheduleSection').style.display='none'">取消</button>
+              <span id="tsScheduleStatus" style="font-size:12px;color:var(--text-muted)"></span>
+            </div>
+          </div>
+
           <!-- 手機預覽 -->
           <div id="tsPhonePreview" style="display:none;margin-top:20px">
             <h4 style="font-size:13px;color:var(--text-muted);margin-bottom:12px">📱 Threads 串文預覽效果</h4>
@@ -328,40 +345,12 @@
         </div>
       </div>
 
-      <!-- Tool 5: 排程發文 -->
-      <div class="chart-card" style="margin-top:20px">
-        <h3>🗓️ 排程發文</h3>
-        <p style="font-size:13px;color:var(--text-dim);margin-bottom:14px">設定未來發布時間，系統自動排程發佈（精度 ±30 分鐘，至少 20 分鐘後）</p>
-
-        <div class="form-group">
-          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">貼文內容</label>
-          <textarea id="schedContent" rows="5" placeholder="輸入貼文內容（最多 500 字）..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
-          <div style="text-align:right;font-size:11px;margin-top:4px"><span id="schedCharCount" style="color:var(--text-muted)">0</span><span style="color:var(--text-muted)"> / 500</span></div>
-        </div>
-
-        <div class="form-group" style="margin-top:12px">
-          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">第一則留言（選填）</label>
-          <textarea id="schedReply" rows="2" placeholder="可選填，發布主文後自動補充第一則留言..." style="width:100%;box-sizing:border-box;resize:vertical"></textarea>
-        </div>
-
-        <div class="form-group" style="margin-top:12px">
-          <label style="font-size:12px;color:var(--text-muted);display:block;margin-bottom:6px">排程時間（台灣時間）</label>
-          <input type="datetime-local" id="schedTime" style="background:var(--bg-card2);border:1px solid #2a2a4a;color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px">
-          <small style="color:var(--text-muted);font-size:11px;display:block;margin-top:4px">⏰ 至少 20 分鐘後｜精度 ±30 分鐘（每 30 分鐘自動檢查一次）</small>
-        </div>
-
-        <div style="margin-top:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-          <button class="btn-primary" onclick="schedSubmit()">🗓️ 加入排程</button>
-          <span id="schedStatus" style="font-size:12px;color:var(--text-muted)"></span>
-        </div>
-      </div>
-
-      <!-- 已排程佇列 -->
+      <!-- 排程管理（佇列顯示） -->
       <div class="chart-card" style="margin-top:20px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
           <div>
-            <h3 style="margin:0">📋 已排程佇列</h3>
-            <p style="font-size:13px;color:var(--text-dim);margin:4px 0 0">待發布 + 最近 30 天歷史記錄</p>
+            <h3 style="margin:0">📋 排程管理</h3>
+            <p style="font-size:13px;color:var(--text-dim);margin:4px 0 0">透過上方「長文串文轉換器 → 🗓️ 排程發布」加入排程；本區顯示待發布 + 最近 30 天歷史</p>
           </div>
           <button class="btn-secondary" style="font-size:12px;padding:6px 12px" onclick="schedLoadQueue()">🔄 重新整理</button>
         </div>
@@ -728,6 +717,6 @@
   </div>
 </div>
 
-<script src="app.js?v=22"></script>
+<script src="app.js?v=23"></script>
 </body>
 </html>
