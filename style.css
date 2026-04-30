@@ -487,7 +487,7 @@ input:focus, select:focus, textarea:focus {
 @keyframes slideIn { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 @keyframes fadeOut { to { opacity: 0; transform: translateY(20px); } }
 
-/* Responsive */
+/* Responsive — Tablet (≤900px) */
 @media (max-width: 900px) {
   .sidebar { width: 60px; padding: 16px 8px; }
   .logo-text, .nav-links li span:not(.nav-icon), .sidebar-footer { display: none; }
@@ -495,7 +495,40 @@ input:focus, select:focus, textarea:focus {
   .content { margin-left: 60px; padding: 20px; }
   .chart-grid { grid-template-columns: 1fr; }
   .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .viral-grid { grid-template-columns: 1fr; }
+  .insights-grid { grid-template-columns: 1fr; }
+  .health-score-wrapper { flex-direction: column; gap: 20px; padding: 20px; align-items: stretch; }
+  .health-breakdown { grid-template-columns: 1fr; }
+  .health-score { align-self: center; }
 }
+
+/* Responsive — Mobile (≤600px) */
+@media (max-width: 600px) {
+  .content { margin-left: 60px; padding: 12px; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .page-header h1 { font-size: 20px; }
+  .kpi-grid { grid-template-columns: 1fr; gap: 10px; }
+  .kpi-card { padding: 14px; }
+  .kpi-value { font-size: 22px; }
+  .form-grid { grid-template-columns: 1fr; }
+  .form-actions { flex-direction: column; }
+  .form-actions button { width: 100%; }
+  .filter-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .filter-row select, .date-filter select { min-width: 100%; }
+  .top-post-item { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .top-post-title { max-width: 100%; }
+  .top-post-stats { flex-wrap: wrap; gap: 10px; }
+  .viral-card { padding: 14px; }
+  .chart-card { padding: 16px; }
+  /* Heatmap: 24 columns × 11px 在手機會擠，包外層水平捲動 */
+  .heatmap-table { font-size: 10px; min-width: 540px; }
+  .heatmap-table th { padding: 4px 2px; font-size: 9px; }
+  .heatmap-table td { padding: 6px 2px; }
+  .heatmap-cell { min-width: 22px; }
+}
+
+/* Heatmap 容器水平捲動（手機防溢出） */
+.heatmap-scroll { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; }
 
 /* Warning Banners */
 .warning-banner {

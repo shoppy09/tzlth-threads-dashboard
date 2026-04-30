@@ -1741,7 +1741,7 @@ function renderHeatmap(filtered) {
   }));
 
   // Render HTML table
-  let html = '<table class="heatmap-table"><thead><tr><th></th>';
+  let html = '<div class="heatmap-scroll"><table class="heatmap-table"><thead><tr><th></th>';
   hours.forEach(h => { html += `<th>${h}:00</th>`; });
   html += '</tr></thead><tbody>';
 
@@ -1759,7 +1759,7 @@ function renderHeatmap(filtered) {
     });
     html += '</tr>';
   });
-  html += '</tbody></table>';
+  html += '</tbody></table></div>';
 
   container.innerHTML = html;
 }
