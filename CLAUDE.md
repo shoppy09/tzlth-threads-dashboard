@@ -220,7 +220,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 0. **git commit + git push 到 GitHub**（此 repo：shoppy09/tzlth-threads-dashboard）
    - 原因：總部儀表板從 GitHub API 讀取資料，本地修改不 push = 儀表板永遠看不到
    - 必須 push 的檔案：`follower-history.json`、`threads-data.json`、任何 .js/.html/.css 修改
-   - auto-fetch.bat 已自動執行 push（2026-04-14 更新）；手動修改 Claude 必須手動 push
+   - 資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00 台灣時間）自動執行 fetch + push；手動修改 Claude 必須手動 push
 1. **更新本文件「最近修改記錄」**（見下表）
 2. **更新總部任務清單**：`C:\Users\USER\Desktop\tzlth-hq\dev\tasks.md`
 3. **更新每日日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\daily-log.md`
@@ -234,12 +234,13 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 |------|---------|---------|------|
 | 2026-04-14 | fetch-threads.js 新增步驟 6：auto-fetch 排程呼叫 threads_insights endpoint 抓取 followers_count，寫入 follower-history.json；修復 6 天未更新問題 | 開發部 | ✅ |
 | 2026-04-21 | 遷移至 Vercel + GitHub Actions：新增 12 個 api/*.js（threads-data/followers/weekly-report/nl-convert/ai-split-thread/token-check/fetch-log/test-publish/publish-single/trigger-sync）+ .github/workflows/cron.yml + vercel.json；app.js 移除 SSE polling、改 sequential publish loop、autoLoadApiData 改 /api/threads-data；server.js 保留本機開發用 | 開發部 | ✅ |
+| 2026-06-18 | auto-fetch.bat 棄用清理（方案 C）：刪 auto-fetch.bat + auto-fetch.log + api/fetch-log.js（fetch-log 完整鏈），server.js 移除 /api/fetch-log route，app.js 移除 fetch-log 警告塊（保留 showDataWarning/vacancyWarning），.vercelignore/.gitignore 清條目。修 trigger-sync.js ref:'main'→'master'（修復 立即同步 dispatch 422 bug）+ 時間訊息 10:00/22:00→09:00/21:00（×2）。資料抓取早已由 tzlth-hq fetch-threads.yml canonical 接管（2026-05-21），本機 .bat 停擺 65 天且作為備援已壞（無 pull）。手動備援＝立即同步按鈕 / GitHub Actions workflow_dispatch | 開發部 | ✅ |
 
 ---
 ## 總部連結（TZLTH-HQ）
 - 系統代號：SYS-02
 - 總部路徑：C:\Users\USER\Desktop\tzlth-hq
 - HQ 角色：Threads 內容的數據中心。追蹤發文績效、追蹤者成長、提供 AI 內容建議，支撐行銷部決策。
-- 存檔規定：auto-fetch.bat 每次執行後自動 git commit + push（2026-04-14 起）。手動發文時 pub-history.json 自動記錄。Claude 手動修改任何檔案後必須立即 push。
-- 拉取欄位：follower-history.json（追蹤者數）、threads-data.json 最後 20 筆（近期貼文績效）、auto-fetch.log 最後幾行（確認抓取正常）
+- 存檔規定：資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00 台灣時間）自動 fetch + git commit + push。手動發文時 pub-history.json 自動記錄。Claude 手動修改任何檔案後必須立即 push。
+- 拉取欄位：follower-history.json（追蹤者數）、threads-data.json 最後 20 筆（近期貼文績效）、threads-data.json `fetchedAt`（確認 ≤24h，取代已棄用的 auto-fetch.log）
 ---

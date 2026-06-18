@@ -261,20 +261,7 @@ app.get('/api/token-check', (req, res) => {
   res.json({ valid: daysRemaining > 0, daysRemaining, createdAt, expiresAt: new Date(created.getTime() + 60*86400000).toISOString().split('T')[0] });
 });
 
-// ===== /api/fetch-log — 自動抓取日誌 =====
-app.get('/api/fetch-log', (req, res) => {
-  const logPath = path.join(__dirname, 'auto-fetch.log');
-  try {
-    if (!fs.existsSync(logPath)) return res.json({ exists: false, lines: [] });
-    const content = fs.readFileSync(logPath, 'utf-8');
-    const lines = content.split('\n').filter(l => l.trim()).slice(-10);
-    const lastSuccess = lines.findLast(l => l.includes('successfully') || l.includes('成功'));
-    const lastFail = lines.findLast(l => l.includes('failed') || l.includes('失敗'));
-    res.json({ exists: true, lines, lastSuccess: lastSuccess || null, lastFail: lastFail || null });
-  } catch (err) {
-    res.json({ exists: false, error: err.message });
-  }
-});
+// (/api/fetch-log 已移除 2026-06-18：auto-fetch.bat 棄用，資料抓取改由 tzlth-hq fetch-threads.yml canonical 接管)
 
 // ===== /api/followers — 粉絲成長歷史 =====
 app.get('/api/followers', (req, res) => {

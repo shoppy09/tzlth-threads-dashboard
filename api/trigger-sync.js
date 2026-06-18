@@ -5,12 +5,12 @@ module.exports = async (req, res) => {
   if (!pat) {
     return res.json({
       triggered: false,
-      message: '資料每日 10:00 / 22:00（台灣時間）自動更新，無需手動觸發'
+      message: '資料每日 09:00 / 21:00（台灣時間）由 tzlth-hq fetch-threads.yml 自動更新，無需手動觸發'
     });
   }
 
   try {
-    const body = JSON.stringify({ ref: 'main' });
+    const body = JSON.stringify({ ref: 'master' });
     await new Promise((resolve, reject) => {
       const options = {
         hostname: 'api.github.com',

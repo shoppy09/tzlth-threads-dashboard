@@ -1568,7 +1568,7 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
     text.textContent = data.triggered ? '已觸發' : '已更新';
     status.textContent = data.triggered
       ? '已觸發 GitHub Actions，3-5 分鐘後更新'
-      : '資料每日 10:00 / 22:00（台灣時間）自動更新';
+      : '資料每日 09:00 / 21:00（台灣時間）自動更新';
   } catch (e) {
     icon.textContent = '❌';
     text.textContent = '失敗';
@@ -1673,17 +1673,6 @@ autoLoadApiData();
         warn.className = data.daysRemaining <= 3 ? 'warning-banner warning-red' : 'warning-banner';
         const urgency = data.daysRemaining <= 3 ? '🚨 緊急！' : '⚠️';
         warn.innerHTML = `${urgency} API Token 將在 <strong>${data.daysRemaining} 天後</strong>過期（${data.expiresAt}）。請到 <a href="https://developers.facebook.com/apps/" target="_blank" style="color:#fff;text-decoration:underline">Meta 開發者平台</a> 重新產生 Token 後更新 .env 檔。 <button onclick="this.parentElement.style.display='none'" style="float:right;background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>`;
-      }
-    }
-  }).catch(() => {});
-
-  // Auto-fetch log
-  fetch('/api/fetch-log').then(r => r.json()).then(data => {
-    if (data.lastFail && !data.lastSuccess) {
-      const warn = document.getElementById('fetchWarning');
-      if (warn) {
-        warn.style.display = 'block';
-        warn.innerHTML = `⚠️ 自動抓取上次執行失敗。請檢查 auto-fetch.log 或手動點擊「立即同步」。 <button onclick="this.parentElement.style.display='none'" style="float:right;background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>`;
       }
     }
   }).catch(() => {});
