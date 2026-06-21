@@ -4,3 +4,7 @@ start-dashboard.bat
 開啟設定檔.bat
 備份系統.bat
 .env
+CLAUDE.md
+fetch-threads.js
+package.json
+package-lock.json
