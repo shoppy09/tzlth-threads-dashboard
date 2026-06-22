@@ -29,7 +29,7 @@ module.exports = async (req, res) => {
       totalComments: arr.reduce((s, p) => s + (p.comments || 0), 0),
       totalReposts: arr.reduce((s, p) => s + (p.reposts || 0), 0),
       totalViews: arr.reduce((s, p) => s + (p.views || 0), 0),
-      totalEngagement: arr.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0) + (p.reposts || 0) + (p.shares || 0), 0),
+      totalEngagement: arr.reduce((s, p) => s + (p.likes || 0) + (p.comments || 0) + (p.reposts || 0) + (p.quotes || 0), 0),
       topPost: [...arr].sort((a, b) =>
         ((b.likes || 0) + (b.comments || 0) + (b.reposts || 0)) -
         ((a.likes || 0) + (a.comments || 0) + (a.reposts || 0))

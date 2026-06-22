@@ -290,7 +290,8 @@ function getFilteredPosts() {
 }
 
 function totalEngagement(p) {
-  return (p.likes || 0) + (p.comments || 0) + (p.reposts || 0) + (p.shares || 0);
+  // 互動總數＝讚+留言+轉發+引用（對齊 Threads 官方互動率公式）；真‧分享(shares) 為獨立北極星指標，不計入此處
+  return (p.likes || 0) + (p.comments || 0) + (p.reposts || 0) + (p.quotes || 0);
 }
 
 // 以瀏覽數計算互動率（%），需至少 100 瀏覽；無瀏覽數時回傳 null
@@ -721,13 +722,14 @@ function renderCharts(filtered) {
   const totalComments = filtered.reduce((s, p) => s + p.comments, 0);
   const totalReposts = filtered.reduce((s, p) => s + (p.reposts || 0), 0);
   const totalShares = filtered.reduce((s, p) => s + (p.shares || 0), 0);
+  const totalQuotes = filtered.reduce((s, p) => s + (p.quotes || 0), 0);
   charts.engagement = new Chart(document.getElementById('chartEngagement'), {
     type: 'doughnut',
     data: {
-      labels: ['❤️ 愛心', '💬 留言', '🔁 轉發', '📤 分享'],
+      labels: ['❤️ 愛心', '💬 留言', '🔁 轉發', '🗣 引用', '📤 分享'],
       datasets: [{
-        data: [totalLikes, totalComments, totalReposts, totalShares],
-        backgroundColor: ['#e74c3c', '#3498db', '#27ae60', '#f39c12'],
+        data: [totalLikes, totalComments, totalReposts, totalQuotes, totalShares],
+        backgroundColor: ['#e74c3c', '#3498db', '#27ae60', '#9b59b6', '#f39c12'],
         borderWidth: 0,
       }]
     },
@@ -763,6 +765,7 @@ function renderTopPosts(filtered) {
         <span>❤️ ${p.likes.toLocaleString()}</span>
         <span>💬 ${p.comments}</span>
         <span>🔁 ${p.reposts || 0}</span>
+        <span>🗣 ${p.quotes || 0}</span>
         <span>📤 ${p.shares || 0}</span>
       </div>
     </div>
@@ -887,6 +890,7 @@ function renderPostsTable() {
       <td>${p.likes.toLocaleString()}</td>
       <td>${p.comments}</td>
       <td>${p.reposts || 0}</td>
+      <td>${p.quotes || 0}</td>
       <td>${p.shares || 0}</td>
       <td>${p.views ? p.views.toLocaleString() : '-'}</td>
       <td>${p.views > 0 ? ((totalEngagement(p) / p.views) * 100).toFixed(1) + '%' : '-'}</td>
@@ -952,11 +956,11 @@ document.getElementById('postsExportBtn')?.addEventListener('click', () => {
   else if (sortF === 'engagement-desc') filtered.sort((a, b) => totalEngagement(b) - totalEngagement(a));
   if (filtered.length === 0) { showToast('沒有可匯出的數據'); return; }
   const esc = s => `"${(s || '').toString().replace(/"/g, '""')}"`;
-  const headers = ['日期','時間','類型','媒體','主題（80字）','完整內文','愛心','留言','轉發','分享','瀏覽','互動總數','Hashtag','連結'];
+  const headers = ['日期','時間','類型','媒體','主題（80字）','完整內文','愛心','留言','轉發','引用','分享','瀏覽','互動總數','Hashtag','連結'];
   const rows = filtered.map(p => [
     p.date, p.time || '', p.type, p.media || '',
     esc(p.title), esc(p.fullText || p.title || ''),
-    p.likes || 0, p.comments || 0, p.reposts || 0, p.shares || 0, p.views || 0,
+    p.likes || 0, p.comments || 0, p.reposts || 0, p.quotes || 0, p.shares || 0, p.views || 0,
     totalEngagement(p), esc(p.hashtags || ''), esc(p.permalink || '')
   ]);
   const csv = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -1431,9 +1435,9 @@ document.getElementById('clearAllData').addEventListener('click', () => {
 // ===== Export CSV =====
 document.getElementById('exportBtn').addEventListener('click', () => {
   if (posts.length === 0) { showToast('沒有數據可匯出'); return; }
-  const headers = ['日期', '時間', '類型', '媒體', '主題', '愛心數', '留言數', '轉發數', '分享數', '瀏覽數', 'Hashtag', '備註'];
+  const headers = ['日期', '時間', '類型', '媒體', '主題', '愛心數', '留言數', '轉發數', '引用數', '分享數', '瀏覽數', 'Hashtag', '備註'];
   const csvEscape = s => `"${(s || '').replace(/"/g, '""')}"`;
-  const rows = posts.map(p => [p.date, p.time, p.type, p.media, csvEscape(p.title), p.likes, p.comments, p.reposts || 0, p.shares || 0, p.views || 0, csvEscape(p.hashtags), csvEscape(p.notes)]);
+  const rows = posts.map(p => [p.date, p.time, p.type, p.media, csvEscape(p.title), p.likes, p.comments, p.reposts || 0, p.quotes || 0, p.shares || 0, p.views || 0, csvEscape(p.hashtags), csvEscape(p.notes)]);
   const bom = '\uFEFF';
   const csv = bom + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
