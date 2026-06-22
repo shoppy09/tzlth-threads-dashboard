@@ -52,18 +52,26 @@ async function getAllThreads() {
   return all;
 }
 
+function parseInsights(res) {
+  const m = {};
+  for (const item of (res.data || [])) {
+    m[item.name] = item.values?.[0]?.value || 0;
+  }
+  return m;
+}
+
 async function getPostInsights(postId) {
-  const url = `${BASE}/${postId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${TOKEN}`;
+  // 正常路徑：combined 6-metric 一個 call（含真‧shares 北極星指標）
+  // shares 對舊貼文可能不可得 → 失敗時 retry core-5，確保 views/likes 等不歸零
+  const zero = { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0, shares: 0 };
   try {
-    const res = await get(url);
-    if (res.error) return { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0 };
-    const m = {};
-    for (const item of (res.data || [])) {
-      m[item.name] = item.values?.[0]?.value || 0;
-    }
-    return m;
+    const res = await get(`${BASE}/${postId}/insights?metric=views,likes,replies,reposts,quotes,shares&access_token=${TOKEN}`);
+    if (!res.error) return parseInsights(res);
+    const core = await get(`${BASE}/${postId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${TOKEN}`);
+    if (!core.error) return parseInsights(core);
+    return zero;
   } catch {
-    return { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0 };
+    return zero;
   }
 }
 
@@ -108,7 +116,8 @@ async function main() {
       likes: insights.likes || 0,
       comments: insights.replies || 0,
       reposts: insights.reposts || 0,
-      shares: insights.quotes || 0,
+      shares: insights.shares || 0,
+      quotes: insights.quotes || 0,
       views: insights.views || 0,
       hashtags: '',
       notes: '',

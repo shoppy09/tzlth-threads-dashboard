@@ -132,9 +132,13 @@ app.get('/api/sync', async (req, res) => {
     const posts = [];
     for (let i = 0; i < allThreads.length; i++) {
       const t = allThreads[i];
-      let insights = { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0 };
+      let insights = { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0, shares: 0 };
       try {
-        const insRes = await apiGet(`${BASE}/${t.id}/insights?metric=views,likes,replies,reposts,quotes&access_token=${TOKEN}`);
+        // combined 6-metric（含真‧shares）；shares 對舊貼文不可得 → retry core-5，core 不歸零
+        let insRes = await apiGet(`${BASE}/${t.id}/insights?metric=views,likes,replies,reposts,quotes,shares&access_token=${TOKEN}`);
+        if (insRes.error) {
+          insRes = await apiGet(`${BASE}/${t.id}/insights?metric=views,likes,replies,reposts,quotes&access_token=${TOKEN}`);
+        }
         if (!insRes.error && insRes.data) {
           for (const item of insRes.data) {
             insights[item.name] = item.values?.[0]?.value || 0;
@@ -154,7 +158,8 @@ app.get('/api/sync', async (req, res) => {
         likes: insights.likes || 0,
         comments: insights.replies || 0,
         reposts: insights.reposts || 0,
-        shares: insights.quotes || 0,
+        shares: insights.shares || 0,
+        quotes: insights.quotes || 0,
         views: insights.views || 0,
         hashtags: '',
         notes: '',
