@@ -10,7 +10,7 @@
 - **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
 - **資料同步**：GitHub Actions cron（每日台灣時間 10:00 / 22:00）自動執行 fetch-threads.js，commit threads-data.json + follower-history.json 至 repo
 - **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；GITHUB_PAT 可選，預防未來轉 private）
-- **AI**：Google Gemini API（gemini-flash-latest 滾動別名，2026-07-03 由 gemini-2.5-flash 遷移，防模型退場靜默失敗，RCF-123），直接 HTTPS 呼叫
+- **AI**：Google Gemini API（gemini-2.5-flash，直接 HTTPS 呼叫）。⚠️ 刻意不用 gemini-flash-latest 滾動別名——經 2026-07-03 A/B 實測，flash-latest（→gemini-3.5-flash）thinking 延遲致本站無 timeout guard 的 AI 端點超過 Vercel 30s 上限（504）；2.5-flash 實測 11.7s 正常。2.5-flash 2026-10-16 退場，屆時遷移需按延遲預算評估 flash-lite/thinkingBudget:0（RCF-123 補記）
 - **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定
