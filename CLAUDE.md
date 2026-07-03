@@ -10,7 +10,7 @@
 - **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
 - **資料同步**：GitHub Actions cron（每日台灣時間 10:00 / 22:00）自動執行 fetch-threads.js，commit threads-data.json + follower-history.json 至 repo
 - **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；GITHUB_PAT 可選，預防未來轉 private）
-- **AI**：Google Gemini API（gemini-2.5-flash），直接 HTTPS 呼叫
+- **AI**：Google Gemini API（gemini-flash-latest 滾動別名，2026-07-03 由 gemini-2.5-flash 遷移，防模型退場靜默失敗，RCF-123），直接 HTTPS 呼叫
 - **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定

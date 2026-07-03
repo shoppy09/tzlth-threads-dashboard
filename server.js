@@ -354,7 +354,7 @@ app.use('/api/nl-convert', rateLimit(20), async (req, res, next) => {
     const apiRes = await new Promise((resolve, reject) => {
       const req = https.request({
         hostname: 'generativelanguage.googleapis.com',
-        path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        path: `/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
       }, (r) => {
@@ -475,7 +475,7 @@ role 只能是：hook（第一篇）、body（中間篇）、cta（最後一篇�
     const apiRes = await new Promise((resolve, reject) => {
       const req = https.request({
         hostname: 'generativelanguage.googleapis.com',
-        path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        path: `/v1beta/models/gemini-flash-latest:generateContent?key=${apiKey}`,
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(postData) }
       }, (r) => {
