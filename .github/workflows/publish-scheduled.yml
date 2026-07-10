@@ -2,8 +2,10 @@ name: Publish Scheduled Threads Posts
 
 on:
   schedule:
-    # Every 30 minutes (UTC). 台灣時間 = UTC+8
-    - cron: '*/30 * * * *'
+    # Once daily at UTC 01:00 (台灣 09:00). 降頻自 */30（2026-07-10）：
+    # 排程發文功能自 2026-04 起閒置（scheduled-posts.json 長期為 []），Tim 實際發文走手動/Threads週規劃，
+    # 每 30 分空跑只是噪音源。⚠️ 若未來重新啟用看板排程發文，須恢復較高頻率（如 */30），否則排程貼文最多延遲 24h。
+    - cron: '0 1 * * *'
   workflow_dispatch:   # 手動觸發，供測試使用
 
 jobs:

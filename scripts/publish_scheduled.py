@@ -35,6 +35,8 @@ GRAPH_API = 'https://graph.threads.net/v1.0'
 HISTORY_DAYS = 30
 LEASE_TIMEOUT_MINUTES = 20  # Zombie lease detection threshold
 STATUS_UPDATE_RETRIES = 3   # SHA conflict retry on final status update
+GET_TRANSIENT_RETRIES = 3   # Retry GET on transient GitHub API errors (502/503/504/network)
+TRANSIENT_STATUSES = {502, 503, 504}  # GitHub server-side transient errors
 
 # Cache user_id within a single run
 _USER_ID_CACHE = None
@@ -63,15 +65,30 @@ def github_request(method, path, body_dict=None):
     }
     if body_bytes:
         headers['Content-Type'] = 'application/json'
-    req = urllib.request.Request(url, data=body_bytes, method=method, headers=headers)
-    try:
-        with urllib.request.urlopen(req) as r:
-            return r.status, json.loads(r.read())
-    except urllib.error.HTTPError as e:
+    # GET is idempotent → retry on transient GitHub 5xx / network errors with backoff.
+    # (Root cause of spurious workflow failures: read_scheduled_file() hit GitHub API 502.)
+    # Non-GET (PUT) is not retried here — write conflicts are handled via SHA/STATUS_UPDATE_RETRIES.
+    attempts = GET_TRANSIENT_RETRIES if method == 'GET' else 1
+    last_status, last_body = None, {}
+    for attempt in range(attempts):
+        req = urllib.request.Request(url, data=body_bytes, method=method, headers=headers)
         try:
-            return e.code, json.loads(e.read())
-        except Exception:
-            return e.code, {}
+            with urllib.request.urlopen(req) as r:
+                return r.status, json.loads(r.read())
+        except urllib.error.HTTPError as e:
+            try:
+                last_status, last_body = e.code, json.loads(e.read())
+            except Exception:
+                last_status, last_body = e.code, {}
+        except urllib.error.URLError as e:
+            # network-level transient (DNS/conn reset/timeout) — retryable for GET
+            last_status, last_body = 599, {'error': str(e)}
+        transient = last_status in TRANSIENT_STATUSES or last_status == 599
+        if method == 'GET' and transient and attempt < attempts - 1:
+            time.sleep(2 ** attempt)  # 1s, 2s exponential backoff
+            continue
+        break
+    return last_status, last_body
 
 
 def read_scheduled_file():
