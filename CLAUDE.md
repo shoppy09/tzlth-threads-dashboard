@@ -216,17 +216,14 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 > 所有對話視窗共用檔案系統。**文件是各視窗之間唯一的共用記憶。**
 
-### ⛔ 每次完成任何修改後，必須執行收尾五件事（新增第 0 步）：
-0. **git commit + git push 到 GitHub**（此 repo：shoppy09/tzlth-threads-dashboard）
-   - 原因：總部儀表板從 GitHub API 讀取資料，本地修改不 push = 儀表板永遠看不到
-   - 必須 push 的檔案：`follower-history.json`、`threads-data.json`、任何 .js/.html/.css 修改
-   - 資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00 台灣時間）自動執行 fetch + push；手動修改 Claude 必須手動 push
-1. **更新本文件「最近修改記錄」**（見下表）
-2. **更新總部任務清單**：`C:\Users\USER\Desktop\tzlth-hq\dev\tasks.md`
-3. **更新每日日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\daily-log.md`
-4. **寫入反思日誌**：`C:\Users\USER\Desktop\tzlth-hq\reports\reflection-log.md`（有實質改善價值才寫）
+### ⛔ 收尾七件事（每次對話結束前必做）
+收尾完整規則詳見**總部 tzlth-hq CLAUDE.md →「核心原則零：收尾七件事」**（7 步驟：git push / 最近修改記錄 / tasks.md / inventory.json / daily-log / reflection-log / 品質自查 HARD STOP / 未完成清單 HARD STOP，均對總部檔案執行；2026-07-12 規則盤點指針化，原「五件事」清單為 D6 漏網，reflection-log「有價值才寫」舊語與主檔「每次必寫」矛盾一併修正）。
+**本 repo 在地特例（保留）**：
+- git push 目標＝shoppy09/tzlth-threads-dashboard；`follower-history.json`/`threads-data.json`/.js/.html 修改必 push（總部儀表板從 GitHub API 讀取，不 push＝看不到）
+- 資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00）自動 fetch+push；手動修改必手動 push
+- 前端（.js/.html）改動：push 後 `npx vercel --prod`（auto-deploy 已停用 2026-04-29）
 
-> 未完成收尾五件事 = 任務未完成。本地修改不 push = 等於沒做。
+> 未完成收尾七件事 = 任務未完成。本地修改不 push = 等於沒做。
 
 ### 最近修改記錄
 
