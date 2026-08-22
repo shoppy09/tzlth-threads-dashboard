@@ -222,6 +222,9 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 - git push 目標＝shoppy09/tzlth-threads-dashboard；`follower-history.json`/`threads-data.json`/.js/.html 修改必 push（總部儀表板從 GitHub API 讀取，不 push＝看不到）
 - 資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00）自動 fetch+push；手動修改必手動 push
 - 前端（.js/.html）改動：push 後 `npx vercel --prod`（auto-deploy 已停用 2026-04-29）
+  > ✅ **2026-08-23 dashboard 實查確認**：本 repo Deployments **回溯至 2026-04-29 零 git-source 部署** ⇒ 停用屬實，本欄正確（本專案即 IMP-088 當日的 Ignored Build Step 處置對象）。
+  > ⚠️ 但總部主檔規則零原載的**全域**「Vercel 自動部署永久停用」是**把本專案的單點處置寫成通則**——8 專案實查為 **5 開／2 關／1 未連 Git**（RCF-153），掛帳 116 天並衍生三次重複發現。**不可據本 repo 推論其他 repo**。
+  > 🔴 **本機 Vercel 憑證已於 2026-08-15～08-22 間消失**（`No existing credentials found`）：本 repo 無 auto-deploy 兜底 ⇒ **目前無可用部署路徑，須待 Tim `npx vercel login`**（HQ tasks P3）。
 
 > 未完成收尾七件事 = 任務未完成。本地修改不 push = 等於沒做。
 
