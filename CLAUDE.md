@@ -224,7 +224,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 - 前端（.js/.html）改動：push 後 `npx vercel --prod`（auto-deploy 已停用 2026-04-29）
   > ✅ **2026-08-23 dashboard 實查確認**：本 repo Deployments **回溯至 2026-04-29 零 git-source 部署** ⇒ 停用屬實，本欄正確（本專案即 IMP-088 當日的 Ignored Build Step 處置對象）。
   > ⚠️ 但總部主檔規則零原載的**全域**「Vercel 自動部署永久停用」是**把本專案的單點處置寫成通則**——8 專案實查為 **5 開／2 關／1 未連 Git**（RCF-153），掛帳 116 天並衍生三次重複發現。**不可據本 repo 推論其他 repo**。
-  > 🔴 **本機 Vercel 憑證已於 2026-08-15～08-22 間消失**（`No existing credentials found`）：本 repo 無 auto-deploy 兜底 ⇒ **目前無可用部署路徑，須待 Tim `npx vercel login`**（HQ tasks P3）。
+  > ✅ **憑證已於 2026-08-23 由 Tim 重新登入復原**，並以本 repo 實測部署通過（`npx.cmd vercel --prod` → Ready 11s → alias `threads-dashboard-lime.vercel.app`；7 端點冒煙與 2026-08-05 default-deny 基準零回歸）。⛔ **PowerShell 一律打 `npx.cmd`**（`npx` 被 ExecutionPolicy 擋在 `npx.ps1`；Bash 不受影響。IMP-112）；**不需 `--scope`**（歷史記錄裡的 `--scope team_jvyEytBJ…` 是憑證異常時的症狀）。
 
 > 未完成收尾七件事 = 任務未完成。本地修改不 push = 等於沒做。
 
