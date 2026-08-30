@@ -4,6 +4,29 @@ function debounce(fn, delay) {
   return function(...args) { clearTimeout(timer); timer = setTimeout(() => fn.apply(this, args), delay); };
 }
 
+/**
+ * threads-data.json 的 date/time 為 Threads Graph API 的 UTC 時間戳
+ * （fetch-threads.js L163-164 直接 split('T') 取用，未做時區轉換）。
+ * 顯示層一律要台灣時間，故在「載入邊界」轉換一次，之後全站消費點（時段分析／
+ * 熱力圖／爆文時段／CSV 匯出／貼文詳情）都自動正確。
+ *
+ * ⚠️ 為什麼不在 fetch-threads.js 轉：threads-data.json 是 canonical，跨 repo 有多個
+ * 消費者假設它是 UTC（tzlth-hq/scripts/content_review.py L133 以 UTC hour < 8 分晨/晚組、
+ * L112 排除鍵 date|time、fixtures/ab-judgment-2026-08-29.json 凍結快照亦為 UTC 鍵）
+ * → 動 canonical 會靜默毀掉 A/B 判定重現。
+ * 詳見 tzlth-hq/dev/tasks.md L925（2026-08-30 修正）。
+ */
+function utcToTaipei(dateStr, timeStr) {
+  const d = new Date(`${dateStr}T${timeStr || '12:00'}:00Z`);
+  if (!dateStr || isNaN(d.getTime())) return { date: dateStr || '', time: timeStr || '12:00' };
+  const t = new Date(d.getTime() + 8 * 3600 * 1000);
+  const p = n => String(n).padStart(2, '0');
+  return {
+    date: `${t.getUTCFullYear()}-${p(t.getUTCMonth() + 1)}-${p(t.getUTCDate())}`,
+    time: `${p(t.getUTCHours())}:${p(t.getUTCMinutes())}`,
+  };
+}
+
 // ===== Data Store =====
 const STORAGE_KEY = 'threads_dashboard_data';
 const SETTINGS_KEY = 'threads_dashboard_settings';
@@ -1097,7 +1120,9 @@ function generateInsights() {
     type: 'info',
     icon: '⏰',
     title: '最佳發文時段',
-    text: `<span class="highlight-text">${bestTime}</span> 發文的平均互動數較高（${Math.round(bestTimeAvg)}）。建議將重點內容安排在此時段發布。`
+    text: `<span class="highlight-text">${bestTime}</span> 發文的歷史平均互動數較高（${Math.round(bestTimeAvg)}）。`
+        + `<br><span style="font-size:11px;color:var(--text-muted)">描述統計，非排稿建議：2026-08-30 內容檢討結案認定，`
+        + `現行體制下時段與成效三軸（views／分享率／互動率）皆與噪音不可分辨，勿據此排稿。</span>`
   });
 
   // 星期幾分析
@@ -1509,8 +1534,7 @@ document.getElementById('importApiFile').addEventListener('change', e => {
       // 轉換 API 格式為儀表板格式
       const imported = data.posts.map((p, i) => ({
         id: p.id || (Date.now().toString() + i),
-        date: p.date || '',
-        time: p.time || '12:00',
+        ...utcToTaipei(p.date, p.time),   // UTC → 台灣時間（載入邊界轉換）
         type: p.type || '純文字',
         media: p.media || '純文字',
         title: p.title || '',
@@ -1607,8 +1631,12 @@ function autoLoadApiData() {
       if (!data.posts || !data.fetchedAt) return;
 
       // 檢查是否有更新的數據
+      // TZ_VERSION：時區轉換版本。localStorage 內可能殘留轉換前（UTC）的快取，
+      // 版本不符時強制重載一次。轉換規則若再變更，遞增本字串即可。
+      const TZ_VERSION = 'tw8-1';
       const lastLoaded = localStorage.getItem('threads_last_fetched');
-      if (lastLoaded === data.fetchedAt && posts.length > 0) {
+      const lastTz = localStorage.getItem('threads_tz_version');
+      if (lastLoaded === data.fetchedAt && lastTz === TZ_VERSION && posts.length > 0) {
         console.log('📋 數據已是最新，無需重新載入');
         return;
       }
@@ -1616,8 +1644,7 @@ function autoLoadApiData() {
       // 載入新數據
       const imported = data.posts.map((p, i) => ({
         id: p.id || String(i),
-        date: p.date || '',
-        time: p.time || '12:00',
+        ...utcToTaipei(p.date, p.time),   // UTC → 台灣時間（載入邊界轉換）
         type: p.type || '純文字',
         media: p.media || '純文字',
         title: p.title || '',
@@ -1637,6 +1664,7 @@ function autoLoadApiData() {
       posts = classifyAllPosts(posts);
       savePosts(posts);
       localStorage.setItem('threads_last_fetched', data.fetchedAt);
+      localStorage.setItem('threads_tz_version', TZ_VERSION);
 
       if (data.profile) {
         settings.name = data.profile.name || settings.name;
