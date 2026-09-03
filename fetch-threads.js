@@ -231,7 +231,9 @@ async function main() {
       const followerLogPath = path.join(__dirname, 'follower-history.json');
       let followerHistory = [];
       try { followerHistory = JSON.parse(fs.readFileSync(followerLogPath, 'utf-8')); } catch {}
-      const todayStr = new Date().toISOString().split('T')[0];
+      // 台灣日期（UTC+8）：GitHub cron 實跑常延遲 4-10h，落入 UTC 16-24 窗（台灣翌日凌晨）時
+      // UTC 日期會把追蹤數寫進前一天（2026-08-24~28 實際發生）。cron 準時時兩者等值。（2026-09-03 L836）
+      const todayStr = new Date(Date.now() + 8 * 3600 * 1000).toISOString().split('T')[0];
       const existing = followerHistory.findIndex(h => h.date === todayStr);
       if (existing >= 0) followerHistory[existing].followers = count;
       else followerHistory.push({ date: todayStr, followers: count });

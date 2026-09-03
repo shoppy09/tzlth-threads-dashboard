@@ -201,7 +201,7 @@ app.get('/api/sync', async (req, res) => {
     const followerLogPath = path.join(__dirname, 'follower-history.json');
     let followerHistory = [];
     try { followerHistory = JSON.parse(fs.readFileSync(followerLogPath, 'utf-8')); } catch {}
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = new Date(Date.now() + 8 * 3600 * 1000).toISOString().split('T')[0]; // 台灣日期，鏡像 fetch-threads.js（2026-09-03 L836；本路徑無 live 部署，防本機/復活時混寫 UTC 基準）
     // Try to get follower count from threads_insights
     try {
       const fcRes = await apiGet(`${BASE}/me/threads_insights?metric=followers_count&access_token=${TOKEN}`);
