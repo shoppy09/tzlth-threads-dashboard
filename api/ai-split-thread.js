@@ -49,13 +49,13 @@ role 只能是：hook（第一篇）、body（中間篇）、cta（最後一篇�
   try {
     const postData = JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 8192, temperature: 0.6 }
+      generationConfig: { maxOutputTokens: 8192, temperature: 0.6, thinkingConfig: { thinkingBudget: 0 } }
     });
 
     const apiRes = await new Promise((resolve, reject) => {
       const req2 = https.request({
         hostname: 'generativelanguage.googleapis.com',
-        path: `/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        path: `/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${apiKey}`,
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
