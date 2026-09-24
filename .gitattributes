@@ -1,0 +1,56 @@
+# 換行與二進位規則（2026-09-24，總部 tzlth-hq 批次:B28／RCF-198 統一推送）
+#
+# WHY：本機 core.autocrlf=true。沒有 .gitattributes 時，git 靠「猜」決定一個檔是不是
+# 文字檔：猜錯成文字 ⇒ checkout 時把二進位檔裡的 LF 換成 CRLF（總部 2026-09-13 實證：
+# 提案 PDF 被注入 146 個 CR，打得開但已逐位元損毀，且不報錯）；猜錯成二進位 ⇒ 文字檔
+# 永遠不會被正規化。把規則寫進 repo，任何環境的 git 都照做，不再依賴各機器的設定。
+#
+# ⚠️ 只影響「存進 repo 的樣子」；Windows 工作區仍可能是 CRLF。
+# ⛔ 新增副檔名時加進對應清單，不要假設「應該沒事」。
+
+# ── 二進位：一律不做換行轉換 ──
+*.pdf   binary
+*.docx  binary
+*.xlsx  binary
+*.pptx  binary
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.gif   binary
+*.ico   binary
+*.mp4   binary
+*.mp3   binary
+*.wav   binary
+*.zip   binary
+*.gpg   binary
+*.ttf   binary
+*.otf   binary
+*.ttc   binary
+*.woff  binary
+*.woff2 binary
+*.exe   binary
+
+# ── 文字：一律以 LF 存入 repo ──
+* text=auto
+*.md    text eol=lf
+*.json  text eol=lf
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.js    text eol=lf
+*.mjs   text eol=lf
+*.cjs   text eol=lf
+*.ts    text eol=lf
+*.tsx   text eol=lf
+*.html  text eol=lf
+*.css   text eol=lf
+*.txt   text eol=lf
+*.csv   text eol=lf
+*.sh    text eol=lf
+*.svg   text eol=lf
+
+# Windows 原生腳本保留 CRLF
+*.ps1   text eol=crlf
+*.cmd   text eol=crlf
+*.bat   text eol=crlf
