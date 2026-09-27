@@ -17,7 +17,7 @@
 - **Vercel 環境變數（必填）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）
 - **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
 - **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 為廢棄設定已無效；**自動部署已透過 Ignored Build Step（Don't build anything / exit 0）正確停用**（2026-04-29 實際設定完成）
-- **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額。新增任何 api/*.js 前必須先確認總數不超過 12
+- **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額（2026-09-28 實數：原記 11 時實為 10，加 `version.js` 後才是 11）。新增任何 api/*.js 前必須先確認總數不超過 12
 - **GitHub Actions secret**：THREADS_ACCESS_TOKEN（Settings → Secrets and variables → Actions）
 - Newsletter API 路由：POST /api/nl-convert
 
@@ -232,6 +232,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-09-28 | 【DEV/SEC】新增公開端點 `api/version.js`（commit／deployment／node 大版本／region）＋`middleware.js` PUBLIC_API 精確清單 +1。函數數 10→11（上限 12；原記「11 個檔案」為 stale，實為 10）。CLI 部署：commit 可能為 null，deployment 必有（HQ tasks「其餘部署面 repo 無法自報正在服務的是哪一次部署」） | 總部視窗 | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | tzlth-hq（批次:B28） | ✅ |
 | 2026-09-08 | **Gemini 換模 `2.5-flash` → `3.1-flash-lite`（總部 tasks 批次:B5／L276，Tim「執行」＋4 輪 rigor gate）**：四個呼叫點全換並補 `thinkingBudget: 0`（`nl-convert` 原本零 `generationConfig`＝thinking 全開跑在 30s 砍線上）。🔴 **選型是實測翻案的結果**：原查照建議的 `3.5-flash-lite` **拒收 `thinkingConfig` 回 400**，照原案施工＝每次呼叫全掛。⚠️ **驗證受 Basic Auth 限制**：`nl-convert`／`ai-split-thread` 不在 `middleware.js` 的 `PUBLIC_API` 放行清單內 ⇒ curl 只驗得到「仍為 401＝存取控制未破」，功能須登入態瀏覽器實測（外稽清單①②早載明此限制）。`server.js` ×2 為本機除錯面、不部署，同批改以免 10-16 後本機靜默壞。 | 總部 HQ | ✅ |
 | 2026-08-30 | 🔴 **時段功能補時區轉換，四個 live 觸點原錯位 8 小時**（HQ tasks L925）：`threads-data.json` 的 date/time 為 Graph API **UTC**（`fetch-threads.js` L163-164 直接 split 取用），`app.js` 各時段消費點未轉換即分桶並標中文時段名 ⇒「早上（9:00前）」實為台灣 08:00-16:59。**修法＝載入邊界轉換**（新 `utcToTaipei()` 套在自動載入與 JSON 匯入兩個 mapper），一次修好 AI 洞察卡／爆文時段／熱力圖（星期軸亦錯）／時段分佈圖／CSV 匯出／貼文詳情。⛔ **刻意不在 `fetch-threads.js` 轉**：`threads-data.json` 是 canonical，跨 repo 消費者假設它是 UTC（tzlth-hq `content_review.py:133` 以 UTC hour<8 分晨/晚組、`:112` 排除鍵、`fixtures/ab-judgment-2026-08-29.json` 凍結快照為 UTC 鍵）⇒ 動 canonical 會靜默毀掉 A/B 判定重現。**儲存格式零變更**。localStorage 舊快取以 `threads_tz_version` 強制重載一次。**本機 778 篇實資料驗證全過**（台灣 11 時 262＝原 UTC 3 時、19 時 109＝原 UTC 11 時、跨日 15、malformed 0、空值不 crash）。另降級 AI 洞察卡措辭（原「建議將重點內容安排在此時段發布」違反 2026-08-30 內容檢討結案：時段與成效三軸皆與噪音不可分辨）。**記錄 3 處同型潛伏點不修**（`fetch-threads.js:234` cron-safe／`server.js:204,304` 休眠／`api/weekly-report.js:40` 內部自洽）→ HQ tasks P3。push + `npx vercel --prod`（auto-deploy 停用）。⏳ live 畫面待 Tim 目視（Basic Auth）。 | 開發部 | ✅ |

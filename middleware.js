@@ -44,6 +44,7 @@ const PUBLIC_API = new Set([
   '/api/threads-data',
   '/api/followers',
   '/api/token-check',
+  '/api/version', // 2026-09-28：部署自報（commit／deployment／node 大版本），無資料
 ]);
 
 export default function middleware(request) {
