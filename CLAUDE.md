@@ -1,20 +1,20 @@
 # Threads 分析儀表板 — 系統說明（供 Claude 讀取）
 
 ## 專案概述
-為 Threads 帳號 @cda_pu_positive_thinking（職涯停看聽，5126 粉絲）建立的本地分析儀表板。
+為 Threads 帳號 @cda_pu_positive_thinking（職涯停看聽）建立的分析儀表板；線上版在 Vercel、全站需登入。追蹤者數不在本檔寫死，見 HQ `social/metrics.json`（2026-10-03 更正，架構全貌見 HQ `projects/SYS-02-threads.md`）。
 提供貼文數據分析、帳號健檢、AI 建議、電子報生成等功能。
 
 ## 技術架構
 - **前端**：純 HTML/CSS/JS（index.html, style.css, app.js）
 - **部署平台**：Vercel（Serverless Functions，api/ 目錄）+ GitHub Actions（cron 資料同步）
 - **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
-- **資料同步**：GitHub Actions cron（每日台灣時間 10:00 / 22:00）自動執行 fetch-threads.js，commit threads-data.json + follower-history.json 至 repo
+- **資料同步**：由 **HQ** 的 `fetch-threads.yml` 排定每日台灣 09:00／21:00 執行本 repo 的 fetch-threads.js，commit threads-data.json + follower-history.json 回本 repo（實際到達常晚 5.5-7 小時）。本 repo 的 `cron.yml` **只剩手動觸發**（「立即同步」按鈕用），沒有排程（2026-10-03 更正，架構全貌見 HQ `projects/SYS-02-threads.md`）
 - **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；GITHUB_PAT 可選，預防未來轉 private）
 - **AI**：Google Gemini API（**`gemini-3.1-flash-lite`**，直接 HTTPS 呼叫）。⚠️ 刻意不用 `gemini-flash-latest` 滾動別名——別名會被靜默熱抽換（官方僅承諾 2 週預告），而本站 AI 端點吃 30s 硬砍；釘版另使 soplint I13 能倒數退場日（`shutdown_date=null` 的別名 I13 直接跳過）。⛔ **2026-09-08 由 `gemini-2.5-flash` 遷移**（該版 2026-10-16 退場，RCF-123 補記三）：四個呼叫點（`api/nl-convert.js`／`api/ai-split-thread.js`／`server.js` ×2）同批換版並全數補 `generationConfig.thinkingConfig.thinkingBudget: 0`——其中 `nl-convert` 原本**連 `generationConfig` 都沒有**，等於 thinking 全開跑在 30s 砍線上。選 `3.1-flash-lite` 而非 `3.5-flash-lite`：後者**拒收 `thinkingConfig` 回 HTTP 400**（三次全失敗，照原案施工＝每次呼叫全掛）；亦非 `3.8-flash`（最慢 2.40s 且測試中 503/429 不穩）。實測 3.1-flash-lite 結構化負載中位 0.99s／最慢 1.03s，離散度最小。全文＝tzlth-hq `dev/gemini-migration-benchmark-2026-09-08.md`。⚠️ 原記「2.5-flash 實測 11.7s 正常」為 thinking 開啟時的舊值，換版後不再是本站的延遲基準。
 - **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定
-- **Vercel 環境變數（必填）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）
+- **Vercel 環境變數（必填，6 個）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）/ BASIC_AUTH_USER / BASIC_AUTH_PASSWORD（`middleware.js` 登入擋門，未設＝全站 503）/ GITHUB_SCHEDULE_TOKEN（`api/scheduled.js`）。2026-10-03 `vercel env ls` 與程式碼逐一對上；原只列前 3 個
 - **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
 - **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 為廢棄設定已無效；**自動部署已透過 Ignored Build Step（Don't build anything / exit 0）正確停用**（2026-04-29 實際設定完成）
 - **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額（2026-09-28 實數：原記 11 時實為 10，加 `version.js` 後才是 11）。新增任何 api/*.js 前必須先確認總數不超過 12
@@ -25,8 +25,8 @@
 ```
 threads-dashboard/
 ├── server.js          # Express 後端，所有 API 路由
-├── app.js             # 前端邏輯（2500+ 行）
-├── index.html         # UI 結構，6 個分頁
+├── app.js             # 前端邏輯（約 3,600 行，2026-10-03 `wc -l` 3,640）
+├── index.html         # UI 結構，8 個分頁
 ├── style.css          # 樣式
 ├── .env               # API Keys（不可外洩）
 ├── threads-data.json  # 同步後的貼文資料
@@ -45,11 +45,13 @@ threads-dashboard/
 5. **帳號健檢**（health）：整體健康評分、各面向分析
 6. **創作工具箱**（input）：草稿分析器、hashtag 工具
 7. **電子報工具**（newsletter）：4 步驟電子報生成，含 AI 轉換
+8. **設定**（settings）：目前粉絲數、帳號名稱等手動設定（2026-10-03 補列；`index.html` 共 8 個 `data-tab`）
 
 ## 貼文資料欄位
-- id, date, time, type（分類）, media, title（80字截斷）, fullText（完整原文）
-- likes, comments, reposts, shares, views, hashtags, notes, permalink
-- isQuotePost（是否為引用貼文）
+- id, date, time, type, media, title（80字截斷）, fullText（串文只有第 1 格）
+- likes, comments, reposts, shares, quotes, views, hashtags, notes, permalink
+- ⚠️ **date／time 是 UTC**（Graph API 原值）；**type 是媒體類型**（純文字／圖片／影片／輪播／REPOST_FACADE），下方 classifyPost 的「觀點短文／長文觀點／串文」是前端另算的
+- ⚠️ **沒有 `isQuotePost`**：2026-10-03 實數 838 篇 0 篇有此欄（fetch-threads.js 有向 API 要 `is_quote_post` 但沒寫進輸出）⇒ 前端分類「串文」目前永遠不會出現（HQ tasks 已立 P3）
 
 ## 貼文分類邏輯（classifyPost）
 使用 fullText.length 判斷，不是 title.length：
@@ -77,17 +79,16 @@ Step 1：選日期區間 → Step 2：選文章（依互動排序）→ Step 3�
 - 輸出截斷 → maxOutputTokens 設為 8192
 
 ## 安全設定
-- 敏感檔案（.env, server.js 等）被 middleware 封鎖，無法直接從瀏覽器存取
-- 速率限制：/api/nl-convert 每分鐘最多 20 次
-- node_modules 目錄封鎖
+- **線上（Vercel）**：`middleware.js` 全站預設要登入（Basic Auth），只放行 4 支唯讀端點：`/api/threads-data`、`/api/followers`、`/api/token-check`、`/api/version`；`.env`、`server.js` 等由 `.vercelignore` 排除、根本不部署
+- **本機（server.js）**：才有 /api/nl-convert 每分鐘 20 次的速率限制與 node_modules 封鎖；線上 `api/nl-convert.js` 沒有速率限制，靠登入擋門（2026-10-03 更正：原寫「敏感檔案被 middleware 封鎖」「nl-convert 限速」為本機版行為）
 
 ## 常見指令
 ```bash
 # 啟動
 node server.js
 
-# 強制重啟（關閉所有 node 程序）
-taskkill /F /IM node.exe && node server.js
+# 強制重啟——⚠️ 下行會砍掉本機「所有」node 程序（含其他專案的開發伺服器），不建議；只停本服務請關掉它自己的視窗
+# taskkill /F /IM node.exe && node server.js
 
 # 查看可用 Gemini 模型
 curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
@@ -120,9 +121,9 @@ curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
 - **Error Boundaries**：generateInsights/Health/Suggestions 用 try-catch 包裝，錯誤時顯示友善訊息
 
 ## syncBtn 操作說明
-- 點擊 → 觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT env var）
-- 若未設定 GITHUB_PAT → 顯示「資料每日 10:00 / 22:00 自動更新」說明訊息
-- 資料更新由 cron.yml 每日自動執行，無需手動觸發
+- 點擊 → `api/trigger-sync.js` 觸發**本 repo** `cron.yml` 的 workflow_dispatch（需 GITHUB_PAT env var；跑的是本 repo GitHub Secrets 裡的 THREADS_ACCESS_TOKEN）
+- 若未設定 GITHUB_PAT → 顯示「資料每日 09:00 / 21:00（台灣時間）由 tzlth-hq fetch-threads.yml 自動更新」說明訊息（`app.js`／`api/trigger-sync.js` 實際字串，2026-10-03 對過）
+- 定時更新由 **HQ** `fetch-threads.yml` 執行，本 repo `cron.yml` 沒有排程
 
 ## 新增功能（v20 升級）— 長文串文轉換器
 
@@ -171,13 +172,16 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 - `GET /api/test-publish`：建立測試 container 驗證 Token 是否有 `threads_content_publish` 權限（不實際發布）
 - `POST /api/publish-single`：發布單篇貼文（~32s，含 30s sleep）；前端依序呼叫實現串文發布
 - `GET /api/token-check`：快速確認 THREADS_ACCESS_TOKEN 是否已設定
-- `GET /api/fetch-log`：回傳 GitHub Actions 同步說明（非 filesystem log）
-- `GET /api/weekly-report`：從私有 repo 讀取 threads-data.json 計算週報
+- ~~`GET /api/fetch-log`~~：2026-06-18 已刪除
+- `GET /api/weekly-report`：讀本 repo（public）raw 的 threads-data.json 計算週報（需登入）
 - `POST /api/nl-convert`：Gemini 自然語言轉換
 - `POST /api/ai-split-thread`：Gemini 長文串文切割
 - `GET /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT）
-- `GET /api/threads-data`：從私有 repo 代理讀取 threads-data.json（GITHUB_PAT auth）
-- `GET /api/followers`：從私有 repo 代理讀取 follower-history.json（GITHUB_PAT auth）
+- `GET /api/threads-data`：代理讀取本 repo raw 的 threads-data.json（GITHUB_PAT 可選；**免登入**）
+- `GET /api/followers`：代理讀取 follower-history.json（**免登入**）
+- `GET/POST/DELETE /api/scheduled`：排程貼文清單讀寫 `data/scheduled-posts.json`（GITHUB_SCHEDULE_TOKEN；需登入）
+- `GET /api/version`：回報正在服務的部署（commit／deployment／node／region；**免登入**）
+- 共 11 支＝11 個函數；免費方案不用框架時上限 12（Vercel 官方 runtimes 頁，2026-10-03 查）
 
 ### 串文發布流程（Vercel 架構）
 ```
@@ -232,13 +236,14 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-03 | 【DEV/HR】常設描述逐條對照實際修 15 處（同步時間、粉絲數、分頁 8、欄位 UTC／無 isQuotePost、安全設定線上 vs 本機、env 6 個、端點清單、taskkill 警告）；本表套雙層制。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-09-28 | 【DEV/SEC】新增公開端點 `api/version.js`（commit／deployment／node 大版本／region）＋`middleware.js` PUBLIC_API 精確清單 +1。函數數 10→11（上限 12；原記「11 個檔案」為 stale，實為 10）。CLI 部署：commit 可能為 null，deployment 必有（HQ tasks「其餘部署面 repo 無法自報正在服務的是哪一次部署」） | 總部視窗 | ✅ |
 | 2026-09-24 | 【DEV】新增 `.gitattributes`：文字檔一律以 LF 存入 repo、二進位檔明列不轉換（總部批次:B28／RCF-198 統一推送）。本 repo renormalize 零檔變動（index 原本即全為 LF）；零程式碼改動 | tzlth-hq（批次:B28） | ✅ |
-| 2026-09-08 | **Gemini 換模 `2.5-flash` → `3.1-flash-lite`（總部 tasks 批次:B5／L276，Tim「執行」＋4 輪 rigor gate）**：四個呼叫點全換並補 `thinkingBudget: 0`（`nl-convert` 原本零 `generationConfig`＝thinking 全開跑在 30s 砍線上）。🔴 **選型是實測翻案的結果**：原查照建議的 `3.5-flash-lite` **拒收 `thinkingConfig` 回 400**，照原案施工＝每次呼叫全掛。⚠️ **驗證受 Basic Auth 限制**：`nl-convert`／`ai-split-thread` 不在 `middleware.js` 的 `PUBLIC_API` 放行清單內 ⇒ curl 只驗得到「仍為 401＝存取控制未破」，功能須登入態瀏覽器實測（外稽清單①②早載明此限制）。`server.js` ×2 為本機除錯面、不部署，同批改以免 10-16 後本機靜默壞。 | 總部 HQ | ✅ |
-| 2026-08-30 | 🔴 **時段功能補時區轉換，四個 live 觸點原錯位 8 小時**（HQ tasks L925）：`threads-data.json` 的 date/time 為 Graph API **UTC**（`fetch-threads.js` L163-164 直接 split 取用），`app.js` 各時段消費點未轉換即分桶並標中文時段名 ⇒「早上（9:00前）」實為台灣 08:00-16:59。**修法＝載入邊界轉換**（新 `utcToTaipei()` 套在自動載入與 JSON 匯入兩個 mapper），一次修好 AI 洞察卡／爆文時段／熱力圖（星期軸亦錯）／時段分佈圖／CSV 匯出／貼文詳情。⛔ **刻意不在 `fetch-threads.js` 轉**：`threads-data.json` 是 canonical，跨 repo 消費者假設它是 UTC（tzlth-hq `content_review.py:133` 以 UTC hour<8 分晨/晚組、`:112` 排除鍵、`fixtures/ab-judgment-2026-08-29.json` 凍結快照為 UTC 鍵）⇒ 動 canonical 會靜默毀掉 A/B 判定重現。**儲存格式零變更**。localStorage 舊快取以 `threads_tz_version` 強制重載一次。**本機 778 篇實資料驗證全過**（台灣 11 時 262＝原 UTC 3 時、19 時 109＝原 UTC 11 時、跨日 15、malformed 0、空值不 crash）。另降級 AI 洞察卡措辭（原「建議將重點內容安排在此時段發布」違反 2026-08-30 內容檢討結案：時段與成效三軸皆與噪音不可分辨）。**記錄 3 處同型潛伏點不修**（`fetch-threads.js:234` cron-safe／`server.js:204,304` 休眠／`api/weekly-report.js:40` 內部自洽）→ HQ tasks P3。push + `npx vercel --prod`（auto-deploy 停用）。⏳ live 畫面待 Tim 目視（Basic Auth）。 | 開發部 | ✅ |
-| 2026-04-21 | 遷移至 Vercel + GitHub Actions：新增 12 個 api/*.js（threads-data/followers/weekly-report/nl-convert/ai-split-thread/token-check/fetch-log/test-publish/publish-single/trigger-sync）+ .github/workflows/cron.yml + vercel.json；app.js 移除 SSE polling、改 sequential publish loop、autoLoadApiData 改 /api/threads-data；server.js 保留本機開發用 | 開發部 | ✅ |
-| 2026-06-18 | auto-fetch.bat 棄用清理（方案 C）：刪 auto-fetch.bat + auto-fetch.log + api/fetch-log.js（fetch-log 完整鏈），server.js 移除 /api/fetch-log route，app.js 移除 fetch-log 警告塊（保留 showDataWarning/vacancyWarning），.vercelignore/.gitignore 清條目。修 trigger-sync.js ref:'main'→'master'（修復 立即同步 dispatch 422 bug）+ 時間訊息 10:00/22:00→09:00/21:00（×2）。資料抓取早已由 tzlth-hq fetch-threads.yml canonical 接管（2026-05-21），本機 .bat 停擺 65 天且作為備援已壞（無 pull）。手動備援＝立即同步按鈕 / GitHub Actions workflow_dispatch | 開發部 | ✅ |
-| 2026-06-22 | **加抓真‧shares 北極星指標 + 分離「引用」(quotes)**（tzlth-hq L213，方案 C′）：WebFetch 證實 Threads insights 有獨立 `shares` metric，舊碼從未抓、把 quotes 當「分享」顯示。**fetch-threads.js + server.js**：getPostInsights 改 combined 6-metric（含 shares）+ 失敗 retry core-5 防呆（舊文 shares 不可得不歸零 core）；post 物件 `shares: insights.shares` + 新增 `quotes`。**app.js + index.html + api/weekly-report.js**：表格/Top/組成圖/2 CSV 加「引用」欄、「分享」欄改真 shares；totalEngagement 改用 quotes（互動率/熱門零位移 + 對齊官方公式），真 shares 獨立北極星。實證：最高文真 shares=537 vs quotes=4（舊看板埋沒北極星）。commit 4180b4a + vercel dpl_C2Ds…ready；deploy-verify SYS-02-2026-06-22 ✅。速率正常路徑零增量（671 篇 cron 4 分鐘）| 開發部 | ✅ |
+| 2026-09-08 | 【DEV】Gemini 換模 `2.5-flash`→`3.1-flash-lite`，四個呼叫點補 `thinkingBudget: 0`（3.5-flash-lite 拒收 thinkingConfig）。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
+| 2026-08-30 | 【DEV】時段功能補 UTC→台灣時區轉換（四個 live 觸點原錯位 8 小時，載入邊界 `utcToTaipei()`）。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
+| 2026-06-22 | 【DEV】加抓真 shares 指標、分離 quotes（fetch-threads.js＋server.js，舊文 shares 不可得不歸零）。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
+| 2026-06-18 | 【DEV】auto-fetch.bat 棄用清理（刪 fetch-log 完整鏈）；trigger-sync ref main→master 修 422。全文見 `CLAUDE-archive-2026-10.md` | 開發部 | ✅ |
+| 2026-04-21 | 【DEV】遷移至 Vercel＋GitHub Actions：新增 api/*.js、cron.yml、vercel.json；server.js 保留本機用。全文見 `CLAUDE-archive-2026-10.md` | 開發部 | ✅ |
 
 ---
 ## 總部連結（TZLTH-HQ）
