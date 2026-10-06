@@ -181,6 +181,9 @@ async function main() {
       hashtags: '',
       notes: '',
       permalink: t.permalink || '',
+      // 2026-10-06 補寫：L80 有向 API 要 is_quote_post，原本沒寫出 ⇒ app.js 的「串文」分類永遠不出現。
+      // 官方定義＝這則貼文引用了另一則貼文（不是自己接續的多格串文）。新增欄位，讀取者按欄位名取值，相容。
+      isQuotePost: t.is_quote_post === true,
     });
 
     if ((i + 1) % 5 === 0) {
@@ -191,6 +194,9 @@ async function main() {
 
   // 4. 輸出摘要
   console.log(`\n✅ 全部完成！共 ${posts.length} 篇貼文\n`);
+  // 驗收用：API 是否仍回傳 is_quote_post（欄位不存在時 isQuotePost 一律 false，靠這行分辨）
+  const quoteFieldReturned = threads.filter(t => 'is_quote_post' in t).length;
+  console.log(`🔁 is_quote_post 欄位回傳 ${quoteFieldReturned}/${threads.length} 篇，其中引用貼文 ${posts.filter(p => p.isQuotePost).length} 篇`);
 
   const totalViews = posts.reduce((s, p) => s + p.views, 0);
   const totalLikes = posts.reduce((s, p) => s + p.likes, 0);

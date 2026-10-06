@@ -8,6 +8,9 @@
 # ⚠️ 只影響「存進 repo 的樣子」；Windows 工作區仍可能是 CRLF。
 # ⛔ 新增副檔名時加進對應清單，不要假設「應該沒事」。
 
+# ⚠️ 2026-10-06 順序修正：git 屬性「後寫的蓋前寫的」，`* text=auto` 必須放在 binary 規則之前，否則會把 binary 改回 text=auto（總部改善追溯，tasks「其餘 8 個 repo 的 .gitattributes 規則順序」）
+* text=auto
+
 # ── 二進位：一律不做換行轉換 ──
 *.pdf   binary
 *.docx  binary
@@ -32,7 +35,6 @@
 *.exe   binary
 
 # ── 文字：一律以 LF 存入 repo ──
-* text=auto
 *.md    text eol=lf
 *.json  text eol=lf
 *.py    text eol=lf
