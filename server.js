@@ -10,7 +10,9 @@ const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3939;
-const HOST = '0.0.0.0'; // Render 需要 0.0.0.0，本機也相容
+// 2026-10-18（HQ 批次:B38，資安稽核 C-9）：原 0.0.0.0 會讓同網段任何人連進來（無登入）；Render 早已停用。
+// 用 'localhost' 不用 '127.0.0.1'：瀏覽器可能走 ::1，綁 127.0.0.1 會連不上（CLAUDE.md「IPv6 問題」）
+const HOST = 'localhost';
 const TOKEN = process.env.THREADS_ACCESS_TOKEN;
 const BASE = 'https://graph.threads.net/v1.0';
 

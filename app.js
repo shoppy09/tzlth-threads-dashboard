@@ -1590,13 +1590,20 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
   status.textContent = '正在觸發 GitHub Actions...';
 
   try {
-    const res = await fetch('/api/trigger-sync');
-    const data = await res.json();
+    // 2026-10-18（HQ 批次:B38）：改 POST＋JSON；失敗不再顯示 ✅（原本不看回應）
+    const res = await fetch('/api/trigger-sync', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    let data = {};
+    try { data = await res.json(); } catch {}
+    if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
     icon.textContent = '✅';
     text.textContent = data.triggered ? '已觸發' : '已更新';
     status.textContent = data.triggered
-      ? '已觸發 GitHub Actions，3-5 分鐘後更新'
-      : '資料每日 09:00 / 21:00（台灣時間）自動更新';
+      ? '已觸發 GitHub Actions，約 7-9 分鐘後更新'
+      : (data.message || '資料每日 09:00 / 21:00（台灣時間）自動更新');
   } catch (e) {
     icon.textContent = '❌';
     text.textContent = '失敗';

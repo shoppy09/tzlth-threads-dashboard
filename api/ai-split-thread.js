@@ -1,7 +1,9 @@
 const https = require('https');
+const { guard } = require('../lib/request-guard');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!guard(req, res)) return;
 
   const { text, targetLen = 300, maxParts = 5, style = 'hook', authorTone = '' } = req.body;
   if (!text || typeof text !== 'string') return res.status(400).json({ error: 'text 參數必填' });

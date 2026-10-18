@@ -1,4 +1,5 @@
 const https = require('https');
+const { guard } = require('../lib/request-guard');
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -30,6 +31,7 @@ function httpsPost(hostname, path, params) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!guard(req, res)) return;
 
   const { text, replyToId, userId: providedUserId } = req.body;
   if (!text) return res.status(400).json({ error: '缺少 text' });

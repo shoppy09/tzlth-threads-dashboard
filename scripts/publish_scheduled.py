@@ -12,7 +12,7 @@ State machine:
   in_progress → published (all posts succeeded)
   in_progress → partially_published (thread mid-failure)
   in_progress → failed (first post failure or single post failure)
-  in_progress → pending (zombie lease timeout, auto-reset)
+  in_progress → failed (zombie lease timeout; 2026-10-18 起不再自動改回 pending，見 reset_zombie_leases)
 """
 
 import json
@@ -34,6 +34,9 @@ TW_OFFSET = timezone(timedelta(hours=8))
 GRAPH_API = 'https://graph.threads.net/v1.0'
 HISTORY_DAYS = 30
 LEASE_TIMEOUT_MINUTES = 20  # Zombie lease detection threshold
+# 2026-10-18（HQ 批次:B38，寫入失敗審查 10-08 ③）：任何寫回 GitHub 失敗都記在這裡，跑完 exit 1
+# ⇒ Actions 紅燈寄信。原本只印 WARNING、照印 Success，失敗沒人看得到
+WRITE_FAILURES = []
 STATUS_UPDATE_RETRIES = 3   # SHA conflict retry on final status update
 GET_TRANSIENT_RETRIES = 3   # Retry GET on transient GitHub API errors (502/503/504/network)
 TRANSIENT_STATUSES = {502, 503, 504}  # GitHub server-side transient errors
@@ -146,7 +149,7 @@ def get_user_id():
 
 def publish_single_post(content, reply_text=None):
     """Publishes one post (and optional first-comment reply) to Threads.
-    Returns the published post ID. Raises on failure."""
+    Returns (post_id, reply_error_or_None). Raises on main-post failure."""
     user_id = get_user_id()
     container = threads_post(f'/{user_id}/threads', {'text': content, 'media_type': 'TEXT'})
     if 'id' not in container:
@@ -160,20 +163,26 @@ def publish_single_post(content, reply_text=None):
     post_id = result['id']
     print(f'  Published main post: {post_id}', flush=True)
 
+    reply_error = None
     if reply_text and reply_text.strip():
         try:
             reply_container = threads_post(
                 f'/{user_id}/threads',
                 {'text': reply_text.strip(), 'media_type': 'TEXT', 'reply_to_id': post_id}
             )
-            if 'id' in reply_container:
-                print(f'  Waiting 30s for reply container...', flush=True)
-                time.sleep(30)
-                threads_post(f'/{user_id}/threads_publish', {'creation_id': reply_container['id']})
-                print(f'  Reply published.', flush=True)
+            if 'id' not in reply_container:
+                raise RuntimeError(f'Reply container creation failed: {reply_container}')
+            print(f'  Waiting 30s for reply container...', flush=True)
+            time.sleep(30)
+            pub = threads_post(f'/{user_id}/threads_publish', {'creation_id': reply_container['id']})
+            if 'id' not in pub:
+                raise RuntimeError(f'Reply publish failed: {pub}')
+            print(f'  Reply published.', flush=True)
         except Exception as e:
-            print(f'  WARNING: Reply publish failed (main post OK): {e}', flush=True)
-    return post_id
+            # 主文已發出 ⇒ 狀態仍是 published，但把留言失敗寫進 reply_error（原本只印、記錄看不到）
+            reply_error = str(e)
+            print(f'::warning::首則留言發布失敗（主文已發出）：{e}', flush=True)
+    return post_id, reply_error
 
 
 def publish_reply(content, reply_to_id):
@@ -198,7 +207,7 @@ def publish_thread(posts):
     if not posts:
         return 0, 'empty_posts'
     try:
-        first_id = publish_single_post(posts[0]['content'])
+        first_id, _ = publish_single_post(posts[0]['content'])
     except Exception as e:
         return 0, f'first_post_failed: {e}'
     success = 1
@@ -220,8 +229,15 @@ def now_tw_iso():
     return datetime.now(TW_OFFSET).isoformat()
 
 
+ZOMBIE_ERROR = ('租約逾時（發文中斷）：可能已發出、也可能沒發出。請到 Threads 確認；'
+                '沒發出再重新排程（為避免重複發文，系統不自動重試）')
+
+
 def reset_zombie_leases(posts):
-    """Reset in_progress entries whose lease has timed out back to pending."""
+    """in_progress 租約逾時 → 標 failed，不自動改回 pending（2026-10-18 HQ 批次:B38 決定 2(a)）。
+
+    卡在 in_progress 有兩種可能：發文前就當掉（沒發出），或發出了但最終狀態寫不回去（已發出）。
+    程式分不出來；原本一律改回 pending ⇒ 後者會在下一次排程重發一次。改成交給人確認。"""
     now = datetime.now(TW_OFFSET)
     changed = False
     for p in posts:
@@ -229,19 +245,23 @@ def reset_zombie_leases(posts):
             continue
         lease_str = p.get('lease_acquired_at')
         if not lease_str:
-            p['status'] = 'pending'
+            p['status'] = 'failed'
+            p['error'] = ZOMBIE_ERROR
+            p['failed_at'] = now_tw_iso()
             changed = True
-            print(f'  Zombie (no lease ts) reset: {p["id"][:8]}', flush=True)
+            print(f'::warning::Zombie (no lease ts) → failed: {p["id"][:8]}', flush=True)
             continue
         try:
             lease_at = dateparser.parse(lease_str)
             if lease_at.tzinfo is None:
                 lease_at = lease_at.replace(tzinfo=TW_OFFSET)
             if (now - lease_at).total_seconds() > LEASE_TIMEOUT_MINUTES * 60:
-                p['status'] = 'pending'
+                p['status'] = 'failed'
+                p['error'] = ZOMBIE_ERROR
+                p['failed_at'] = now_tw_iso()
                 p.pop('lease_acquired_at', None)
                 changed = True
-                print(f'  Zombie lease (>{LEASE_TIMEOUT_MINUTES}min) reset: {p["id"][:8]}', flush=True)
+                print(f'::warning::Zombie lease (>{LEASE_TIMEOUT_MINUTES}min) → failed: {p["id"][:8]}', flush=True)
         except Exception as e:
             print(f'  Lease parse error on {p["id"][:8]}: {e}', flush=True)
     return changed
@@ -272,6 +292,8 @@ def update_final_status(entry_id, final_status, **kwargs):
         if final_status == 'published':
             target['published_at'] = now_tw_iso()
             target['error'] = None
+            if kwargs.get('reply_error'):
+                target['reply_error'] = kwargs.get('reply_error')
         elif final_status == 'partially_published':
             target['published_count'] = kwargs.get('published_count')
             target['total_count'] = kwargs.get('total_count')
@@ -279,6 +301,7 @@ def update_final_status(entry_id, final_status, **kwargs):
             target['published_at'] = now_tw_iso()
         elif final_status == 'failed':
             target['error'] = kwargs.get('error')
+            target['failed_at'] = now_tw_iso()
         status = write_scheduled_file(
             posts, sha,
             f'status: {entry_id[:8]} → {final_status}'
@@ -287,7 +310,9 @@ def update_final_status(entry_id, final_status, **kwargs):
             return True
         print(f'  Status update SHA conflict (attempt {attempt+1}/{STATUS_UPDATE_RETRIES})', flush=True)
         time.sleep(2)
-    print(f'  WARNING: Failed to update status after {STATUS_UPDATE_RETRIES} retries for {entry_id[:8]}', flush=True)
+    print(f'::error::最終狀態寫不回 GitHub（{STATUS_UPDATE_RETRIES} 次）：{entry_id[:8]} → {final_status}。'
+          f'租約逾時後會被標成 failed，請到 Threads 確認是否已發出', flush=True)
+    WRITE_FAILURES.append(f'status {entry_id[:8]}')
     return False
 
 
@@ -320,16 +345,20 @@ def process_one_entry(entry):
                 extra['error'] = err
         else:
             # Single post (legacy / API direct call)
-            publish_single_post(entry.get('content', ''), entry.get('reply_text'))
+            _, reply_err = publish_single_post(entry.get('content', ''), entry.get('reply_text'))
             final_status = 'published'
+            if reply_err:
+                extra['reply_error'] = reply_err
     except Exception as e:
         final_status = 'failed'
         extra['error'] = str(e)
         print(f'  ❌ Failed: {e}', flush=True)
 
-    update_final_status(entry_id, final_status, **extra)
-    if final_status == 'published':
+    ok = update_final_status(entry_id, final_status, **extra)
+    if final_status == 'published' and ok:
         print(f'  ✅ Success: {entry_id[:8]}', flush=True)
+    elif final_status == 'published':
+        print(f'  ⚠️ Published but status not saved: {entry_id[:8]}', flush=True)
     elif final_status == 'partially_published':
         print(f'  ⚠️ Partial: {extra.get("published_count")}/{extra.get("total_count")} for {entry_id[:8]}', flush=True)
     else:
@@ -346,7 +375,8 @@ def cleanup_old_records():
     def keep(p):
         if p.get('status') in ('pending', 'in_progress'):
             return True
-        ts = p.get('published_at') or p.get('cancelled_at') or p.get('created_at', '')
+        # failed_at（2026-10-18 起）：沒有它時 failed 會退回 created_at，30 天前建的排程一失敗就被清掉
+        ts = p.get('published_at') or p.get('failed_at') or p.get('cancelled_at') or p.get('created_at', '')
         return ts >= cutoff_iso
 
     new_posts = [p for p in posts if keep(p)]
@@ -358,6 +388,8 @@ def cleanup_old_records():
     )
     if status in (200, 201):
         print(f'Cleaned {len(posts) - len(new_posts)} old records.', flush=True)
+    else:
+        print(f'::warning::清理舊紀錄寫回失敗（HTTP {status}），下次再清', flush=True)
 
 
 def main():
@@ -368,7 +400,10 @@ def main():
     # Step 1: Sweep zombie leases
     posts, sha = read_scheduled_file()
     if reset_zombie_leases(posts):
-        write_scheduled_file(posts, sha, 'chore: reset zombie leases')
+        zs = write_scheduled_file(posts, sha, 'chore: mark zombie leases failed')
+        if zs not in (200, 201):
+            print(f'::error::殭屍租約標 failed 寫回失敗（HTTP {zs}）', flush=True)
+            WRITE_FAILURES.append('zombie')
         posts, sha = read_scheduled_file()
 
     # Step 2: Find due entries
@@ -388,6 +423,7 @@ def main():
     if not due:
         print('No entries due. Cleanup and exit.', flush=True)
         cleanup_old_records()
+        finish()
         return
 
     print(f'{len(due)} entry(ies) due for publishing.', flush=True)
@@ -400,6 +436,13 @@ def main():
     # Step 4: Cleanup
     cleanup_old_records()
     print('Run complete.', flush=True)
+    finish()
+
+
+def finish():
+    if WRITE_FAILURES:
+        print(f'::error::寫回 GitHub 失敗 {len(WRITE_FAILURES)} 處：{", ".join(WRITE_FAILURES)}', flush=True)
+        sys.exit(1)
 
 
 if __name__ == '__main__':

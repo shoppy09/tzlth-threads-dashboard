@@ -1,4 +1,5 @@
 const https = require('https');
+const { guard } = require('../lib/request-guard');
 
 function httpsPost(hostname, path, params) {
   const body = new URLSearchParams(params).toString();
@@ -27,6 +28,7 @@ function httpsPost(hostname, path, params) {
 }
 
 module.exports = async (req, res) => {
+  if (!guard(req, res, { json: false })) return;
   const token = process.env.THREADS_ACCESS_TOKEN;
   if (!token) return res.status(500).json({ error: 'THREADS_ACCESS_TOKEN 未設定' });
 

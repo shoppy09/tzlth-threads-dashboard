@@ -1,7 +1,9 @@
 const https = require('https');
+const { guard } = require('../lib/request-guard');
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
+  if (!guard(req, res)) return;
   const { prompt } = req.body;
   if (!prompt) return res.status(400).json({ error: '缺少 prompt' });
   const apiKey = process.env.GOOGLE_AI_API_KEY;

@@ -13,11 +13,11 @@
 
 const https = require('https');
 const crypto = require('crypto');
+const { guard } = require('../lib/request-guard');
 
 const GITHUB_TOKEN = process.env.GITHUB_SCHEDULE_TOKEN;
 const REPO = 'shoppy09/tzlth-threads-dashboard';
 const FILE_PATH = 'data/scheduled-posts.json';
-const ALLOWED_ORIGIN = 'https://threads-dashboard-lime.vercel.app';
 const MAX_THREAD_POSTS = 20;
 const MAX_POST_CHARS = 500;
 
@@ -70,11 +70,8 @@ async function writeFile(posts, sha, message) {
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 module.exports = async (req, res) => {
-  // CORS: reject cross-origin requests from wrong domains
-  const origin = req.headers['origin'];
-  if (origin && origin !== ALLOWED_ORIGIN) {
-    return res.status(403).json({ error: 'Forbidden' });
-  }
+  // 跨站請求防護（2026-10-18 HQ 批次:B38，C-6）：原本寫死一個網址，改成同源比對；寫入另要求 JSON
+  if (!guard(req, res, { json: req.method !== 'GET' })) return;
 
   if (!GITHUB_TOKEN) return res.status(500).json({ error: 'GITHUB_SCHEDULE_TOKEN 未設定' });
 
@@ -88,7 +85,7 @@ module.exports = async (req, res) => {
       const pending = posts.filter(p => p.status === 'pending')
         .sort((a, b) => new Date(a.scheduled_at) - new Date(b.scheduled_at));
       const history = posts.filter(p => !['pending', 'in_progress'].includes(p.status))
-        .sort((a, b) => new Date(b.published_at || b.cancelled_at || b.created_at) - new Date(a.published_at || a.cancelled_at || a.created_at));
+        .sort((a, b) => new Date(b.published_at || b.failed_at || b.cancelled_at || b.created_at) - new Date(a.published_at || a.failed_at || a.cancelled_at || a.created_at));
       return res.json([...inProgress, ...pending, ...history]);
     } catch (e) {
       return res.status(500).json({ error: e.message });
