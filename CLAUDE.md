@@ -31,6 +31,7 @@ threads-dashboard/
 ├── .env               # API Keys（不可外洩）
 ├── threads-data.json  # 同步後的貼文資料
 ├── follower-history.json # 粉絲成長記錄
+├── thread-parts.json  # 串文第 2 格以後（2026-10-18 起；fetch-threads.js 寫入，內容沒變不重寫；不上 Vercel）
 ├── CLAUDE.md          # 本檔案
 ├── start-dashboard.bat    # 啟動伺服器
 ├── 重啟伺服器.bat         # 強制關閉舊程序後重啟
@@ -48,7 +49,7 @@ threads-dashboard/
 8. **設定**（settings）：目前粉絲數、帳號名稱等手動設定（2026-10-03 補列；`index.html` 共 8 個 `data-tab`）
 
 ## 貼文資料欄位
-- id, date, time, type, media, title（80字截斷）, fullText（串文只有第 1 格）
+- id, date, time, type, media, title（80字截斷）, fullText（串文只有第 1 格；第 2 格以後在 `thread-parts.json`，2026-10-18 起）
 - likes, comments, reposts, shares, quotes, views, hashtags, notes, permalink
 - ⚠️ **date／time 是 UTC**（Graph API 原值）；**type 是媒體類型**（純文字／圖片／影片／輪播／REPOST_FACADE），下方 classifyPost 的「觀點短文／長文觀點／串文」是前端另算的
 - `isQuotePost`：2026-10-06 起寫入（`5a7e964`；官方定義＝引用了另一則貼文，不是自己接續的多格串文）。原記「沒有此欄」已過時（2026-10-18 更正）
@@ -238,6 +239,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-18 | 【DEV/SOC】**串文全格（HQ tasks L831）**：`GET /me/replies` 依 replied_to 串接、排除回覆讀者，寫獨立檔 `thread-parts.json`（放進 threads-data.json 會逼近 Vercel 4.5MB）；cron.yml push 加重試。`6be26ac`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SEC】**寫入失敗與跨站防護（HQ 批次:B38）**：寫入類 API 同源＋JSON（`lib/request-guard.js`）、立即同步 POST 看 204、排程逾時標 failed 不重發＋failed_at、抓取器指標失敗沿用舊值過半不寫檔、server.js 綁 localhost。`f06b552`／`66588c3`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-15 | 【DEV】**部署結果比對（HQ L879，RCF-246）**：總部 `deploy_status.py 看板` 讀本 repo `/api/version`（10-15 線上 21e4f9b，之後只改不需部署的檔＝成功）；本檔部署行補「部署前先 commit、部署後查」。零程式碼改動。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-03 | 【DEV/HR】常設描述逐條對照實際修 15 處（同步時間、粉絲數、分頁 8、欄位 UTC／無 isQuotePost、安全設定線上 vs 本機、env 6 個、端點清單、taskkill 警告）；本表套雙層制。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
