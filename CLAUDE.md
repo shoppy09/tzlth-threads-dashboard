@@ -51,7 +51,7 @@ threads-dashboard/
 - id, date, time, type, media, title（80字截斷）, fullText（串文只有第 1 格）
 - likes, comments, reposts, shares, quotes, views, hashtags, notes, permalink
 - ⚠️ **date／time 是 UTC**（Graph API 原值）；**type 是媒體類型**（純文字／圖片／影片／輪播／REPOST_FACADE），下方 classifyPost 的「觀點短文／長文觀點／串文」是前端另算的
-- ⚠️ **沒有 `isQuotePost`**：2026-10-03 實數 838 篇 0 篇有此欄（fetch-threads.js 有向 API 要 `is_quote_post` 但沒寫進輸出）⇒ 前端分類「串文」目前永遠不會出現（HQ tasks 已立 P3）
+- `isQuotePost`：2026-10-06 起寫入（`5a7e964`；官方定義＝引用了另一則貼文，不是自己接續的多格串文）。原記「沒有此欄」已過時（2026-10-18 更正）
 
 ## 貼文分類邏輯（classifyPost）
 使用 fullText.length 判斷，不是 title.length：
@@ -80,7 +80,8 @@ Step 1：選日期區間 → Step 2：選文章（依互動排序）→ Step 3�
 
 ## 安全設定
 - **線上（Vercel）**：`middleware.js` 全站預設要登入（Basic Auth），只放行 4 支唯讀端點：`/api/threads-data`、`/api/followers`、`/api/token-check`、`/api/version`；`.env`、`server.js` 等由 `.vercelignore` 排除、根本不部署
-- **本機（server.js）**：才有 /api/nl-convert 每分鐘 20 次的速率限制與 node_modules 封鎖；線上 `api/nl-convert.js` 沒有速率限制，靠登入擋門（2026-10-03 更正：原寫「敏感檔案被 middleware 封鎖」「nl-convert 限速」為本機版行為）
+- **跨站請求防護（2026-10-18，HQ 批次:B38）**：`lib/request-guard.js`——帶 Origin 必須等於本次請求的主機；寫入／花錢類只收 `application/json`（跨站表單送不出）。新增寫入類端點時一併套上。放 `lib/` 是因為 `api/` 每檔算一個函式（上限 12）
+- **本機（server.js）**：綁 `localhost`（2026-10-18 起；原 0.0.0.0 會讓同網段任何人無登入連入。勿改 127.0.0.1，見上方 IPv6 問題）；才有 /api/nl-convert 每分鐘 20 次的速率限制與 node_modules 封鎖；線上 `api/nl-convert.js` 沒有速率限制，靠登入擋門（2026-10-03 更正：原寫「敏感檔案被 middleware 封鎖」「nl-convert 限速」為本機版行為）
 
 ## 常見指令
 ```bash
@@ -121,7 +122,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
 - **Error Boundaries**：generateInsights/Health/Suggestions 用 try-catch 包裝，錯誤時顯示友善訊息
 
 ## syncBtn 操作說明
-- 點擊 → `api/trigger-sync.js` 觸發**本 repo** `cron.yml` 的 workflow_dispatch（需 GITHUB_PAT env var；跑的是本 repo GitHub Secrets 裡的 THREADS_ACCESS_TOKEN）
+- 點擊 → **POST** `api/trigger-sync.js`（JSON）觸發**本 repo** `cron.yml` 的 workflow_dispatch（需 GITHUB_PAT env var；跑的是本 repo GitHub Secrets 裡的 THREADS_ACCESS_TOKEN）；GitHub 回 204 才顯示 ✅，其餘顯示 ❌＋原因（2026-10-18 起，原本 GET、不看回應）
 - 若未設定 GITHUB_PAT → 顯示「資料每日 09:00 / 21:00（台灣時間）由 tzlth-hq fetch-threads.yml 自動更新」說明訊息（`app.js`／`api/trigger-sync.js` 實際字串，2026-10-03 對過）
 - 定時更新由 **HQ** `fetch-threads.yml` 執行，本 repo `cron.yml` 沒有排程
 
@@ -169,14 +170,14 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 ## 新增功能（v21 升級）— 串文發布系統（Vercel 版）
 
 ### API 端點（api/ 目錄，Vercel Serverless Functions）
-- `GET /api/test-publish`：建立測試 container 驗證 Token 是否有 `threads_content_publish` 權限（不實際發布）
+- `GET /api/test-publish`：建立測試 container 驗證 Token 是否有 `threads_content_publish` 權限（不實際發布）；只做同源檢查
 - `POST /api/publish-single`：發布單篇貼文（~32s，含 30s sleep）；前端依序呼叫實現串文發布
 - `GET /api/token-check`：快速確認 THREADS_ACCESS_TOKEN 是否已設定
 - ~~`GET /api/fetch-log`~~：2026-06-18 已刪除
 - `GET /api/weekly-report`：讀本 repo（public）raw 的 threads-data.json 計算週報（需登入）
 - `POST /api/nl-convert`：Gemini 自然語言轉換
 - `POST /api/ai-split-thread`：Gemini 長文串文切割
-- `GET /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT）
+- `POST /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT；只收 JSON）
 - `GET /api/threads-data`：代理讀取本 repo raw 的 threads-data.json（GITHUB_PAT 可選；**免登入**）
 - `GET /api/followers`：代理讀取 follower-history.json（**免登入**）
 - `GET/POST/DELETE /api/scheduled`：排程貼文清單讀寫 `data/scheduled-posts.json`（GITHUB_SCHEDULE_TOKEN；需登入）
@@ -237,6 +238,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-18 | 【DEV/SEC】**寫入失敗與跨站防護（HQ 批次:B38）**：寫入類 API 同源＋JSON（`lib/request-guard.js`）、立即同步 POST 看 204、排程逾時標 failed 不重發＋failed_at、抓取器指標失敗沿用舊值過半不寫檔、server.js 綁 localhost。`f06b552`／`66588c3`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-15 | 【DEV】**部署結果比對（HQ L879，RCF-246）**：總部 `deploy_status.py 看板` 讀本 repo `/api/version`（10-15 線上 21e4f9b，之後只改不需部署的檔＝成功）；本檔部署行補「部署前先 commit、部署後查」。零程式碼改動。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-03 | 【DEV/HR】常設描述逐條對照實際修 15 處（同步時間、粉絲數、分頁 8、欄位 UTC／無 isQuotePost、安全設定線上 vs 本機、env 6 個、端點清單、taskkill 警告）；本表套雙層制。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-09-28 | 【DEV/SEC】新增公開端點 `api/version.js`（commit／deployment／node 大版本／region）＋`middleware.js` PUBLIC_API 精確清單 +1。函數數 10→11（上限 12；原記「11 個檔案」為 stale，實為 10）。CLI 部署：commit 可能為 null，deployment 必有（HQ tasks「其餘部署面 repo 無法自報正在服務的是哪一次部署」） | 總部視窗 | ✅ |
