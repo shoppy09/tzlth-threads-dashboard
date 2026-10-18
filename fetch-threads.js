@@ -129,8 +129,13 @@ function loadPreviousPosts() {
   }
 }
 
-// ── 串文全格（2026-10-18 HQ 批次:B38，tasks L831；⏳ 尚未接進 main：存放位置待定——寫進 threads-data.json 會讓
-//    /api/threads-data 回應逼近 Vercel 4.5MB 上限）──────────────────────────
+// ── 串文全格（2026-10-18 HQ 批次:B38，tasks L831）
+// ⛔ 存在獨立檔 thread-parts.json，不放進 threads-data.json：實測 2,138 格約 2.7MB，放進去會讓
+//    /api/threads-data 回應約 4.2MB，逼近 Vercel 函式 4.5MB 上限（超過回 413、看板整頁沒資料）。
+//    獨立檔另一個好處：內容沒變就不重寫 ⇒ 不會每班都多一份幾 MB 的 commit（Tim 2026-10-18 選 A）。
+// 檔案格式：{ updatedAt, status, count, posts: { <頂層貼文 id>: [ {id,text,timestamp,permalink,media_type}, … ] } }
+//   posts 只放有第 2 格以後的貼文；第 1 格仍在 threads-data.json 的 fullText。
+//   status＝ok／partial（頁數達上限）／failed（本次沒抓到，posts 沿用上一份）；lastAttemptAt＝最後一次嘗試──────────────────────────
 // /me/threads 只回頂層貼文 ⇒ 自串第 2 格以後要另抓 GET /me/replies（官方 reference/user：
 // 「擷取用戶建立之所有 Threads 回覆」，欄位含 root_post、replied_to，limit 最大 100）。
 // 只收「接在自己這串後面」的格：回覆對象（replied_to）必須是串首或這串已收的格。
@@ -186,6 +191,40 @@ async function getAllReplies() {
     if (url) await sleep(500);
   }
   return { replies: all, pages, status: 'ok' };
+}
+
+const THREAD_PARTS_FILE = 'thread-parts.json';
+
+async function writeThreadParts(ownIds) {
+  console.log('\n🧵 取得自串文第 2 格以後...');
+  const file = path.join(__dirname, THREAD_PARTS_FILE);
+  let prev = null;
+  try { prev = JSON.parse(fs.readFileSync(file, 'utf-8')); } catch {}
+  const now = new Date().toISOString();
+  try {
+    const { replies, pages, status } = await getAllReplies();
+    const byRoot = buildThreadParts(replies, ownIds);
+    const postsObj = {};
+    let count = 0;
+    for (const id of ownIds) {
+      const parts = byRoot.get(id);
+      if (parts) { postsObj[id] = parts; count += parts.length; }
+    }
+    const same = prev && prev.status === status && JSON.stringify(prev.posts) === JSON.stringify(postsObj);
+    console.log(`   ✅ 回覆 ${replies.length} 則（${pages} 頁），接進串文 ${count} 格、${Object.keys(postsObj).length} 篇${status === 'partial' ? '（⚠️ 頁數達上限，舊貼文可能不完整）' : ''}`);
+    if (status === 'partial') console.log('::warning::串文全格頁數達上限，舊貼文可能不完整');
+    if (same) {
+      console.log('   內容沒變，不重寫 thread-parts.json');
+      return;
+    }
+    fs.writeFileSync(file, JSON.stringify({ updatedAt: now, lastAttemptAt: now, status, count, posts: postsObj }, null, 2), 'utf-8');
+    console.log(`   💾 已寫入 ${THREAD_PARTS_FILE}`);
+  } catch (e) {
+    // 沿用上一份內容、只更新狀態；第一次就失敗也要建檔（HQ workflow 的 git add 清單有這個檔）
+    const keep = prev && prev.posts ? prev : { updatedAt: null, count: 0, posts: {} };
+    fs.writeFileSync(file, JSON.stringify({ ...keep, status: 'failed', lastAttemptAt: now }, null, 2), 'utf-8');
+    console.log(`::warning::串文全格抓取失敗，沿用上一份（${keep.count || 0} 格）：${e.message.replace(/access_token=[^&\s]+/g, 'access_token=***')}`);
+  }
 }
 
 async function main() {
@@ -321,6 +360,9 @@ async function main() {
   console.log(`\n💾 數據已儲存到: ${outputPath}`);
   console.log('   請在儀表板中點「匯入 API 數據」載入');
 
+  // 5b. 串文全格 → 獨立檔 thread-parts.json（fail-soft：任何錯誤都不影響上面已寫好的主資料）
+  await writeThreadParts(new Set(posts.map(p => p.id)));
+
   // 6. 追蹤者數歷史記錄
   console.log('\n👥 取得追蹤者數...');
   try {
@@ -357,4 +399,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { classifyApiError, getWithRetry, get, buildThreadParts, getAllReplies, getPostInsights };
+module.exports = { classifyApiError, getWithRetry, get, buildThreadParts, getAllReplies, getPostInsights, writeThreadParts };

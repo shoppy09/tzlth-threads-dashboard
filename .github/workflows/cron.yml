@@ -22,6 +22,18 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add follower-history.json threads-data.json
-          git diff --staged --quiet || git commit -m "auto: sync Threads data $(date -u '+%Y-%m-%d %H:%M UTC')"
-          git push
+          # thread-parts.json：串文第 2 格以後（2026-10-18 HQ 批次:B38；fetch-threads.js 每次都會建檔）
+          git add follower-history.json threads-data.json thread-parts.json
+          git diff --staged --quiet || git commit -m "[skip ci] auto: sync Threads data $(date -u '+%Y-%m-%d %H:%M UTC') via 立即同步"
+          # 2026-10-18（HQ 批次:B38）：原本裸 git push，跑的 7～9 分鐘內只要有別的 commit 進 master 就被拒
+          # （10-18 run 39105635250 實例）。照 HQ fetch-threads.yml 寫法：先 rebase 再推、3 次全敗才失敗（耗盡守門，見 HQ dev/CLAUDE.md）
+          pushed=0
+          for attempt in 1 2 3; do
+            if git pull --rebase origin master && git push; then pushed=1; break; fi
+            echo "Push rejected (attempt $attempt/3), retrying in 3s..."
+            sleep 3
+          done
+          if [ "$pushed" != "1" ]; then
+            echo "::error::push failed after 3 attempts — commit 未上傳"
+            exit 1
+          fi
