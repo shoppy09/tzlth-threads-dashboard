@@ -106,16 +106,86 @@ function parseInsights(res) {
 async function getPostInsights(postId) {
   // 正常路徑：combined 6-metric 一個 call（含真‧shares 北極星指標）
   // shares 對舊貼文可能不可得 → 失敗時 retry core-5，確保 views/likes 等不歸零
-  const zero = { views: 0, likes: 0, replies: 0, reposts: 0, quotes: 0, shares: 0 };
+  // 2026-10-18（HQ 批次:B38，寫入失敗 ①）：兩次都失敗回 null，不再回全 0——
+  // 原本回 0 會被當成真數字 commit，KPI 觀看數靜默歸零。呼叫端改沿用上一份的數值並計數。
   try {
     const res = await get(`${BASE}/${postId}/insights?metric=views,likes,replies,reposts,quotes,shares&access_token=${TOKEN}`);
     if (!res.error) return parseInsights(res);
     const core = await get(`${BASE}/${postId}/insights?metric=views,likes,replies,reposts,quotes&access_token=${TOKEN}`);
     if (!core.error) return parseInsights(core);
-    return zero;
+    return null;
   } catch {
-    return zero;
+    return null;
   }
+}
+
+// 上一份 threads-data.json（HQ fetch-threads.yml checkout 本 repo master，檔案就在這裡）
+function loadPreviousPosts() {
+  try {
+    const prev = JSON.parse(fs.readFileSync(path.join(__dirname, 'threads-data.json'), 'utf-8'));
+    return new Map((prev.posts || []).map(p => [p.id, p]));
+  } catch {
+    return new Map();
+  }
+}
+
+// ── 串文全格（2026-10-18 HQ 批次:B38，tasks L831；⏳ 尚未接進 main：存放位置待定——寫進 threads-data.json 會讓
+//    /api/threads-data 回應逼近 Vercel 4.5MB 上限）──────────────────────────
+// /me/threads 只回頂層貼文 ⇒ 自串第 2 格以後要另抓 GET /me/replies（官方 reference/user：
+// 「擷取用戶建立之所有 Threads 回覆」，欄位含 root_post、replied_to，limit 最大 100）。
+// 只收「接在自己這串後面」的格：回覆對象（replied_to）必須是串首或這串已收的格。
+// ⛔ 這條判準同時把「在自己貼文底下回覆讀者」排除掉——那種回覆的 replied_to 是讀者的留言。
+//    本 repo 是 public，讀者的內容不能因此被寫進公開資料檔。
+const MAX_REPLY_PAGES = 200; // 防呆：超過就停（約 2 萬則），狀態記 partial
+
+function buildThreadParts(replies, rootIds) {
+  // 依時間由舊到新處理，確保上一格先進集合；回傳 Map(rootId → parts[])
+  const byRoot = new Map();
+  for (const r of replies) {
+    const root = r.root_post && r.root_post.id;
+    if (!root || !rootIds.has(root)) continue;
+    if (!byRoot.has(root)) byRoot.set(root, []);
+    byRoot.get(root).push(r);
+  }
+  const out = new Map();
+  for (const [root, list] of byRoot) {
+    list.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp)));
+    const chain = new Set([root]);
+    const parts = [];
+    for (const r of list) {
+      const parent = r.replied_to && r.replied_to.id;
+      if (!parent || !chain.has(parent)) continue;
+      chain.add(r.id);
+      parts.push({
+        id: r.id,
+        text: r.text || '',
+        timestamp: r.timestamp || '',
+        permalink: r.permalink || '',
+        media_type: r.media_type || '',
+      });
+    }
+    if (parts.length) out.set(root, parts);
+  }
+  return out;
+}
+
+async function getAllReplies() {
+  let all = [];
+  let pages = 0;
+  let url = `${BASE}/me/replies?fields=id,text,timestamp,permalink,media_type,root_post,replied_to,is_reply&limit=100&access_token=${TOKEN}`;
+  while (url) {
+    if (pages >= MAX_REPLY_PAGES) return { replies: all, pages, status: 'partial' };
+    const res = await getWithRetry(url, `回覆分頁(已 ${all.length} 則)`);
+    if (res.error) {
+      const e = new Error(`回覆分頁中斷（已載入 ${all.length} 則）：code ${res.error.code} ${res.error.message}`);
+      throw e;
+    }
+    all = all.concat(res.data || []);
+    pages++;
+    url = res.paging?.next || null;
+    if (url) await sleep(500);
+  }
+  return { replies: all, pages, status: 'ok' };
 }
 
 async function main() {
@@ -155,10 +225,24 @@ async function main() {
   // 3. 逐篇取得指標
   console.log('📊 取得每篇貼文的互動指標...');
   const posts = [];
+  const prevById = loadPreviousPosts();
+  let insightFailed = 0;
+  let insightCarried = 0;
 
   for (let i = 0; i < threads.length; i++) {
     const t = threads[i];
-    const insights = await getPostInsights(t.id);
+    let insights = await getPostInsights(t.id);
+    if (insights === null) {
+      // API 失敗：沿用上一份的數值（新貼文沒有上一份 → 只能 0，照樣計入失敗數）
+      insightFailed++;
+      const p = prevById.get(t.id);
+      if (p) {
+        insightCarried++;
+        insights = { views: p.views, likes: p.likes, replies: p.comments, reposts: p.reposts, quotes: p.quotes, shares: p.shares };
+      } else {
+        insights = {};
+      }
+    }
 
     const date = t.timestamp ? t.timestamp.split('T')[0] : '';
     const time = t.timestamp ? t.timestamp.split('T')[1]?.substring(0, 5) : '00:00';
@@ -190,6 +274,17 @@ async function main() {
       console.log(`   ${i + 1}/${threads.length} 篇已處理...`);
       await sleep(1500); // 避免速率限制
     }
+  }
+
+  // 3b. 指標失敗太多 → 不寫檔、結束碼 1（HQ workflow 的 commit 步驟因此跳過、Actions 變紅燈寄信）
+  //     門檻一半：token 中途失效時後段會整片失敗；零星失敗則沿用舊值並在 Actions 摘要留警告
+  if (insightFailed > 0) {
+    const msg = `單篇指標失敗 ${insightFailed}/${threads.length} 篇（沿用上一份 ${insightCarried} 篇，其餘記 0）`;
+    if (insightFailed * 2 > threads.length) {
+      console.error(`::error::${msg}——超過一半，本次不寫檔`);
+      process.exit(1);
+    }
+    console.log(`::warning::${msg}`);
   }
 
   // 4. 輸出摘要
@@ -246,10 +341,11 @@ async function main() {
       fs.writeFileSync(followerLogPath, JSON.stringify(followerHistory, null, 2), 'utf-8');
       console.log(`   ✅ 追蹤者數：${count.toLocaleString()}（已寫入 follower-history.json）`);
     } else {
-      console.log('   ⚠️  追蹤者數為 0 或無法取得，跳過寫入');
+      // ::warning:: 會出現在 Actions 摘要；連續沒更新由 HQ cron-health-check 的 follower-history 列抓（>48h 標紅）
+      console.log(`::warning::追蹤者數為 0 或無法取得，跳過寫入${fcRes.error ? `（code ${fcRes.error.code} ${fcRes.error.message}）` : ''}`);
     }
   } catch (err) {
-    console.error(`   ❌ 追蹤者數抓取失敗：${err.message}`);
+    console.log(`::warning::追蹤者數抓取失敗：${err.message}`);
   }
 }
 
@@ -261,4 +357,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { classifyApiError, getWithRetry, get };
+module.exports = { classifyApiError, getWithRetry, get, buildThreadParts, getAllReplies, getPostInsights };
