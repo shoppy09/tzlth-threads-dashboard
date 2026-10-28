@@ -1,18 +1,25 @@
 """
-publish_scheduled.py
-Triggered by GitHub Actions every 30 minutes.
-Reads data/scheduled-posts.json, publishes due posts (single or thread) to Threads,
-writes back with lease-based concurrency protection.
+publish_scheduled.py — Threads 排程發文（看板 A-28）
 
-Uses GITHUB_TOKEN (auto-provided by Actions) and THREADS_ACCESS_TOKEN (secret).
+2026-10-28 改版（HQ RCF-278，tasks「Threads 日更改由看板排程發出」；HQ routine-automation-sop.md 第五、六節）：
+  - 模式 PUBLISH_MODE＝dry（空跑：不寫佇列、不發文，只產出「會發什麼」與比對）／live（真的發）。預設 dry。
+  - 工作 TASK：
+      publish  10:57 由 QStash 觸發（publish-scheduled.yml）；5 分鐘內到期的拿出來，等到排程時間才發（才拿租約，
+               等待期間看板「取消」鈕仍有效）
+      compare  12:30 由 QStash 觸發（publish-followup.yml）：dry＝讀 Tim 手發的那串逐格比對；
+               live＝當天還沒發的觸發 publish 補發一次（晚 2 小時內），⛔ 補發也只在 publish-scheduled.yml 裡發，
+               所以「停用 publish-scheduled.yml」（schedule_control.py pause A-28）＝全部停住
+      watch    GitHub 自己的排程（publish-followup.yml；實際約 13 點多才跑）：只看不發——當天該跑的沒跑、
+               11:00 的文還沒發、週日彙總、token 到期提醒
+      probe    手動：驗 token、回覆權限（threads_publishing_limit 需 threads_manage_replies）、建一個不發布的容器
+  - 控制：a 核准雜湊／b 每次 1 則 ≤10 格、晚 2 小時不發／c 租約＋發前看近 48 小時首行／d 存每格編號讀回／
+          e 停用 workflow／f notify_line.py／g tests/test_publish_scheduled.py（見 publish_controls.py 檔頭）
 
-State machine:
-  pending → in_progress (lease acquired with SHA)
-  pending → cancelled (user DELETE)
-  in_progress → published (all posts succeeded)
-  in_progress → partially_published (thread mid-failure)
-  in_progress → failed (first post failure or single post failure)
-  in_progress → failed (zombie lease timeout; 2026-10-18 起不再自動改回 pending，見 reset_zombie_leases)
+State machine（沿用 2026-10-18 B38）：
+  pending → in_progress（租約）→ published／partially_published／failed
+  pending → cancelled（Tim 在看板取消；或發前發現已手動發過）
+  in_progress 逾時 → failed（不自動重發：可能已發出，交給人確認）
+  發到一半失敗 → partially_published，不自動重試（重試會重複發前幾格），推 LINE 附已發格數
 """
 
 import json
@@ -24,93 +31,140 @@ import urllib.error
 import urllib.parse
 from base64 import b64decode, b64encode
 from datetime import datetime, timezone, timedelta
-from dateutil import parser as dateparser
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import publish_controls as pc  # noqa: E402
+import notify_line  # noqa: E402
 
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 THREADS_TOKEN = os.environ.get('THREADS_ACCESS_TOKEN')
-REPO = 'shoppy09/tzlth-threads-dashboard'
+MODE = os.environ.get('PUBLISH_MODE', 'dry').strip() or 'dry'
+TASK = os.environ.get('TASK', 'publish').strip() or 'publish'
+TOKEN_EXPIRES_ON = os.environ.get('THREADS_TOKEN_EXPIRES_ON', '')   # YYYY-MM-DD，換 token 時一起改 workflow
+REPO = os.environ.get('GITHUB_REPOSITORY') or 'shoppy09/tzlth-threads-dashboard'
 FILE_PATH = 'data/scheduled-posts.json'
-TW_OFFSET = timezone(timedelta(hours=8))
-GRAPH_API = 'https://graph.threads.net/v1.0'
+DRY_LOG_PATH = 'data/publish-dry-log.json'
+PUBLISH_WORKFLOW = 'publish-scheduled.yml'
+FOLLOWUP_WORKFLOW = 'publish-followup.yml'
+TW_OFFSET = pc.TW
+GRAPH_API = pc.GRAPH_API
 HISTORY_DAYS = 30
-LEASE_TIMEOUT_MINUTES = 20  # Zombie lease detection threshold
-# 2026-10-18（HQ 批次:B38，寫入失敗審查 10-08 ③）：任何寫回 GitHub 失敗都記在這裡，跑完 exit 1
-# ⇒ Actions 紅燈寄信。原本只印 WARNING、照印 Success，失敗沒人看得到
+DRY_LOG_KEEP = 60
+LEASE_TIMEOUT_MINUTES = 20
 WRITE_FAILURES = []
-STATUS_UPDATE_RETRIES = 3   # SHA conflict retry on final status update
-GET_TRANSIENT_RETRIES = 3   # Retry GET on transient GitHub API errors (502/503/504/network)
-TRANSIENT_STATUSES = {502, 503, 504}  # GitHub server-side transient errors
+STATUS_UPDATE_RETRIES = 3
+GET_TRANSIENT_RETRIES = 3
+TRANSIENT_STATUSES = {502, 503, 504}
+CONTAINER_WAIT_S = 30     # Meta 官方建議建立容器後平均等 30 秒再發布
+NOTES = []                # 本次要推給 Tim 的異常（最後一次合併推）
+SUMMARY = []              # 寫進 Actions 摘要（公開 repo：只寫標題與結果，不寫全文以外的東西）
 
-# Cache user_id within a single run
 _USER_ID_CACHE = None
 
 
-# ── Validation ──────────────────────────────────────────────────────────────
-
-def check_env():
-    if not GITHUB_TOKEN:
-        print('ERROR: GITHUB_TOKEN not set', flush=True)
-        sys.exit(1)
-    if not THREADS_TOKEN:
-        print('ERROR: THREADS_ACCESS_TOKEN not set', flush=True)
-        sys.exit(1)
+def note(msg):
+    NOTES.append(msg)
+    print(f'::warning::{msg}', flush=True)
 
 
-# ── GitHub Contents API ──────────────────────────────────────────────────────
+def summary(line):
+    SUMMARY.append(line)
+    print(line, flush=True)
 
-def github_request(method, path, body_dict=None):
-    url = f'https://api.github.com/repos/{REPO}/contents/{path}'
-    body_bytes = json.dumps(body_dict).encode('utf-8') if body_dict else None
-    headers = {
-        'Authorization': f'Bearer {GITHUB_TOKEN}',
-        'Accept': 'application/vnd.github+json',
-        'User-Agent': 'tzlth-publisher',
-    }
+
+def label(entry):
+    d = (entry.get('scheduled_at') or '')[5:10].replace('-', '/')
+    t = (entry.get('title') or pc.first_line((entry.get('posts') or [{}])[0].get('content', '')))[:12]
+    return f'{d}〈{t}〉'
+
+
+# ── GitHub API ───────────────────────────────────────────────────────────────
+
+def gh_api(method, path, body_dict=None):
+    url = path if path.startswith('http') else f'https://api.github.com{path}'
+    body_bytes = json.dumps(body_dict).encode('utf-8') if body_dict is not None else None
+    headers = {'Authorization': f'Bearer {GITHUB_TOKEN}', 'Accept': 'application/vnd.github+json',
+               'User-Agent': 'tzlth-publisher'}
     if body_bytes:
         headers['Content-Type'] = 'application/json'
-    # GET is idempotent → retry on transient GitHub 5xx / network errors with backoff.
-    # (Root cause of spurious workflow failures: read_scheduled_file() hit GitHub API 502.)
-    # Non-GET (PUT) is not retried here — write conflicts are handled via SHA/STATUS_UPDATE_RETRIES.
     attempts = GET_TRANSIENT_RETRIES if method == 'GET' else 1
     last_status, last_body = None, {}
     for attempt in range(attempts):
         req = urllib.request.Request(url, data=body_bytes, method=method, headers=headers)
         try:
-            with urllib.request.urlopen(req) as r:
-                return r.status, json.loads(r.read())
+            with urllib.request.urlopen(req, timeout=60) as r:
+                raw = r.read()
+                return r.status, (json.loads(raw) if raw else {})
         except urllib.error.HTTPError as e:
             try:
                 last_status, last_body = e.code, json.loads(e.read())
-            except Exception:
+            except Exception:  # noqa: BLE001
                 last_status, last_body = e.code, {}
         except urllib.error.URLError as e:
-            # network-level transient (DNS/conn reset/timeout) — retryable for GET
             last_status, last_body = 599, {'error': str(e)}
         transient = last_status in TRANSIENT_STATUSES or last_status == 599
         if method == 'GET' and transient and attempt < attempts - 1:
-            time.sleep(2 ** attempt)  # 1s, 2s exponential backoff
+            time.sleep(2 ** attempt)
             continue
         break
     return last_status, last_body
 
 
-def read_scheduled_file():
-    status, body = github_request('GET', FILE_PATH)
+def read_json_file(path):
+    status, body = gh_api('GET', f'/repos/{REPO}/contents/{path}')
     if status == 404:
         return [], None
     if status != 200:
-        raise RuntimeError(f'GitHub read error: {status} — {body}')
-    posts = json.loads(b64decode(body['content']))
-    return posts, body['sha']
+        raise RuntimeError(f'GitHub read error {path}: {status} — {body}')
+    return json.loads(b64decode(body['content'])), body['sha']
 
 
-def write_scheduled_file(posts, sha, message):
-    encoded = b64encode(json.dumps(posts, ensure_ascii=False, indent=2).encode('utf-8')).decode()
+def write_json_file(path, data, sha, message):
+    encoded = b64encode(json.dumps(data, ensure_ascii=False, indent=2).encode('utf-8')).decode()
     payload = {'message': message, 'content': encoded}
     if sha:
         payload['sha'] = sha
-    status, _ = github_request('PUT', FILE_PATH, payload)
-    return status  # 200/201 = ok, 409 = SHA conflict
+    status, _ = gh_api('PUT', f'/repos/{REPO}/contents/{path}', payload)
+    return status
+
+
+def read_scheduled_file():
+    return read_json_file(FILE_PATH)
+
+
+def write_scheduled_file(posts, sha, message):
+    if MODE != 'live':
+        raise RuntimeError('空跑模式不得寫佇列（SOP 第六節）')
+    return write_json_file(FILE_PATH, posts, sha, message)
+
+
+def append_dry_log(record):
+    """空跑紀錄（不是佇列）：給週日彙總與空跑判讀用。"""
+    for attempt in range(3):
+        log, sha = read_json_file(DRY_LOG_PATH)
+        log = (log or []) + [record]
+        st = write_json_file(DRY_LOG_PATH, log[-DRY_LOG_KEEP:], sha,
+                             f'[skip ci] dry-run log: {record.get("task")} {record.get("date")}')
+        if st in (200, 201):
+            return True
+        time.sleep(2)
+    WRITE_FAILURES.append('dry-log')
+    print('::error::空跑紀錄寫不回 GitHub', flush=True)
+    return False
+
+
+def dispatch(workflow, inputs):
+    st, body = gh_api('POST', f'/repos/{REPO}/actions/workflows/{workflow}/dispatches',
+                      {'ref': 'master', 'inputs': inputs})
+    return st in (200, 204), st, body
+
+
+def runs_today(workflow, today):
+    q = urllib.parse.quote(f'>={today}')
+    st, body = gh_api('GET', f'/repos/{REPO}/actions/workflows/{workflow}/runs?created={q}&per_page=20')
+    if st != 200:
+        return None
+    return [r for r in body.get('workflow_runs', []) if r.get('event') == 'workflow_dispatch']
 
 
 # ── Threads API ──────────────────────────────────────────────────────────────
@@ -118,115 +172,80 @@ def write_scheduled_file(posts, sha, message):
 def threads_post(endpoint, params):
     params['access_token'] = THREADS_TOKEN
     body = urllib.parse.urlencode(params).encode('utf-8')
-    req = urllib.request.Request(
-        f'{GRAPH_API}{endpoint}',
-        data=body,
-        method='POST',
-        headers={'Content-Type': 'application/x-www-form-urlencoded'}
-    )
+    req = urllib.request.Request(f'{GRAPH_API}{endpoint}', data=body, method='POST',
+                                 headers={'Content-Type': 'application/x-www-form-urlencoded'})
     with urllib.request.urlopen(req, timeout=60) as r:
         return json.loads(r.read())
 
 
 def threads_get(path):
-    sep = '&' if '?' in path else '?'
-    url = f'{GRAPH_API}{path}{sep}access_token={THREADS_TOKEN}'
-    req = urllib.request.Request(url, headers={'User-Agent': 'tzlth-publisher'})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return json.loads(r.read())
+    return pc.threads_get(path, THREADS_TOKEN)
 
 
 def get_user_id():
     global _USER_ID_CACHE
     if _USER_ID_CACHE:
         return _USER_ID_CACHE
-    me = threads_get('/me?fields=id')
+    me = threads_get('/me?fields=id,username')
     if 'id' not in me:
         raise RuntimeError(f'Could not get user ID: {me}')
     _USER_ID_CACHE = me['id']
     return _USER_ID_CACHE
 
 
-def publish_single_post(content, reply_text=None):
-    """Publishes one post (and optional first-comment reply) to Threads.
-    Returns (post_id, reply_error_or_None). Raises on main-post failure."""
-    user_id = get_user_id()
-    container = threads_post(f'/{user_id}/threads', {'text': content, 'media_type': 'TEXT'})
-    if 'id' not in container:
-        raise RuntimeError(f'Main container creation failed: {container}')
-    container_id = container['id']
-    print(f'  Waiting 30s for container {container_id}...', flush=True)
-    time.sleep(30)
-    result = threads_post(f'/{user_id}/threads_publish', {'creation_id': container_id})
-    if 'id' not in result:
-        raise RuntimeError(f'Publish failed: {result}')
-    post_id = result['id']
-    print(f'  Published main post: {post_id}', flush=True)
+def create_container(text, reply_to=None):
+    params = {'text': text, 'media_type': 'TEXT'}
+    if reply_to:
+        params['reply_to_id'] = reply_to
+    c = threads_post(f'/{get_user_id()}/threads', params)
+    if 'id' not in c:
+        raise RuntimeError(f'container failed: {c}')
+    return c['id']
 
+
+def publish_container(cid):
+    time.sleep(CONTAINER_WAIT_S)
+    r = threads_post(f'/{get_user_id()}/threads_publish', {'creation_id': cid})
+    if 'id' not in r:
+        raise RuntimeError(f'publish failed: {r}')
+    return r['id']
+
+
+def publish_single_post(content, reply_text=None):
+    """單篇（舊格式，保留給 API 直呼）。回傳 (post_id, reply_error)。"""
+    post_id = publish_container(create_container(content))
     reply_error = None
     if reply_text and reply_text.strip():
         try:
-            reply_container = threads_post(
-                f'/{user_id}/threads',
-                {'text': reply_text.strip(), 'media_type': 'TEXT', 'reply_to_id': post_id}
-            )
-            if 'id' not in reply_container:
-                raise RuntimeError(f'Reply container creation failed: {reply_container}')
-            print(f'  Waiting 30s for reply container...', flush=True)
-            time.sleep(30)
-            pub = threads_post(f'/{user_id}/threads_publish', {'creation_id': reply_container['id']})
-            if 'id' not in pub:
-                raise RuntimeError(f'Reply publish failed: {pub}')
-            print(f'  Reply published.', flush=True)
-        except Exception as e:
-            # 主文已發出 ⇒ 狀態仍是 published，但把留言失敗寫進 reply_error（原本只印、記錄看不到）
+            publish_container(create_container(reply_text.strip(), reply_to=post_id))
+        except Exception as e:  # noqa: BLE001
             reply_error = str(e)
             print(f'::warning::首則留言發布失敗（主文已發出）：{e}', flush=True)
     return post_id, reply_error
 
 
-def publish_reply(content, reply_to_id):
-    """Publish one post as a reply to an existing post. Raises on failure."""
-    user_id = get_user_id()
-    container = threads_post(f'/{user_id}/threads', {
-        'text': content, 'media_type': 'TEXT', 'reply_to_id': reply_to_id
-    })
-    if 'id' not in container:
-        raise RuntimeError(f'Reply container creation failed: {container}')
-    print(f'  Waiting 30s for reply container...', flush=True)
-    time.sleep(30)
-    result = threads_post(f'/{user_id}/threads_publish', {'creation_id': container['id']})
-    if 'id' not in result:
-        raise RuntimeError(f'Reply publish failed: {result}')
-    print(f'  Published reply: {result["id"]}', flush=True)
-    return result['id']
-
-
-def publish_thread(posts):
-    """Publish a thread (chained replies). Returns (success_count, error_or_None)."""
-    if not posts:
-        return 0, 'empty_posts'
-    try:
-        first_id, _ = publish_single_post(posts[0]['content'])
-    except Exception as e:
-        return 0, f'first_post_failed: {e}'
-    success = 1
-    prev_id = first_id
-    for post in posts[1:]:
-        time.sleep(2)  # rate-limit buffer between containers
+def publish_thread(cells):
+    """回傳 (已發的編號列表, error_or_None)。發到一半失敗不重試。"""
+    ids = []
+    for c in cells:
         try:
-            reply_id = publish_reply(post['content'], reply_to_id=prev_id)
-            prev_id = reply_id
-            success += 1
-        except Exception as e:
-            return success, f'post_{post.get("seq", "?")}_failed: {e}'
-    return success, None
+            pid = publish_container(create_container(c, reply_to=ids[-1] if ids else None))
+            ids.append(pid)
+            print(f'  Published cell {len(ids)}: {pid}', flush=True)
+        except Exception as e:  # noqa: BLE001
+            return ids, f'cell_{len(ids) + 1}_failed: {e}'
+        time.sleep(2)
+    return ids, None
 
 
-# ── Concurrency control: lease + zombie sweep ────────────────────────────────
+# ── 租約與狀態（live 才會呼叫）────────────────────────────────────────────────
+
+def now_tw():
+    return datetime.now(TW_OFFSET)
+
 
 def now_tw_iso():
-    return datetime.now(TW_OFFSET).isoformat()
+    return now_tw().isoformat()
 
 
 ZOMBIE_ERROR = ('租約逾時（發文中斷）：可能已發出、也可能沒發出。請到 Threads 確認；'
@@ -234,53 +253,38 @@ ZOMBIE_ERROR = ('租約逾時（發文中斷）：可能已發出、也可能沒
 
 
 def reset_zombie_leases(posts):
-    """in_progress 租約逾時 → 標 failed，不自動改回 pending（2026-10-18 HQ 批次:B38 決定 2(a)）。
-
-    卡在 in_progress 有兩種可能：發文前就當掉（沒發出），或發出了但最終狀態寫不回去（已發出）。
-    程式分不出來；原本一律改回 pending ⇒ 後者會在下一次排程重發一次。改成交給人確認。"""
-    now = datetime.now(TW_OFFSET)
+    now = now_tw()
     changed = False
     for p in posts:
         if p.get('status') != 'in_progress':
             continue
         lease_str = p.get('lease_acquired_at')
-        if not lease_str:
+        try:
+            stale = (not lease_str) or (now - pc.parse_ts(lease_str)).total_seconds() > LEASE_TIMEOUT_MINUTES * 60
+        except Exception as e:  # noqa: BLE001
+            print(f'  Lease parse error on {p["id"][:8]}: {e}', flush=True)
+            continue
+        if stale:
             p['status'] = 'failed'
             p['error'] = ZOMBIE_ERROR
             p['failed_at'] = now_tw_iso()
+            p.pop('lease_acquired_at', None)
             changed = True
-            print(f'::warning::Zombie (no lease ts) → failed: {p["id"][:8]}', flush=True)
-            continue
-        try:
-            lease_at = dateparser.parse(lease_str)
-            if lease_at.tzinfo is None:
-                lease_at = lease_at.replace(tzinfo=TW_OFFSET)
-            if (now - lease_at).total_seconds() > LEASE_TIMEOUT_MINUTES * 60:
-                p['status'] = 'failed'
-                p['error'] = ZOMBIE_ERROR
-                p['failed_at'] = now_tw_iso()
-                p.pop('lease_acquired_at', None)
-                changed = True
-                print(f'::warning::Zombie lease (>{LEASE_TIMEOUT_MINUTES}min) → failed: {p["id"][:8]}', flush=True)
-        except Exception as e:
-            print(f'  Lease parse error on {p["id"][:8]}: {e}', flush=True)
+            note(f'Threads 排程 {label(p)} 發文中斷（租約逾時），可能已發出，請到 Threads 確認')
     return changed
 
 
 def acquire_lease(entry_id):
-    """Atomic update: pending → in_progress with SHA. Returns True if claimed."""
     posts, sha = read_scheduled_file()
     target = next((p for p in posts if p.get('id') == entry_id), None)
     if not target or target.get('status') != 'pending':
         return False
     target['status'] = 'in_progress'
     target['lease_acquired_at'] = now_tw_iso()
-    status = write_scheduled_file(posts, sha, f'lease: claim {entry_id[:8]}')
-    return status in (200, 201)
+    return write_scheduled_file(posts, sha, f'lease: claim {entry_id[:8]}') in (200, 201)
 
 
-def update_final_status(entry_id, final_status, **kwargs):
-    """Update entry to final status, retry on SHA 409 up to N times."""
+def update_entry(entry_id, final_status, **kw):
     for attempt in range(STATUS_UPDATE_RETRIES):
         posts, sha = read_scheduled_file()
         target = next((p for p in posts if p.get('id') == entry_id), None)
@@ -289,159 +293,299 @@ def update_final_status(entry_id, final_status, **kwargs):
             return False
         target['status'] = final_status
         target.pop('lease_acquired_at', None)
+        stamp = {'published': 'published_at', 'partially_published': 'published_at',
+                 'failed': 'failed_at', 'cancelled': 'cancelled_at'}.get(final_status)
+        if stamp:
+            target[stamp] = now_tw_iso()
         if final_status == 'published':
-            target['published_at'] = now_tw_iso()
             target['error'] = None
-            if kwargs.get('reply_error'):
-                target['reply_error'] = kwargs.get('reply_error')
-        elif final_status == 'partially_published':
-            target['published_count'] = kwargs.get('published_count')
-            target['total_count'] = kwargs.get('total_count')
-            target['error'] = kwargs.get('error')
-            target['published_at'] = now_tw_iso()
-        elif final_status == 'failed':
-            target['error'] = kwargs.get('error')
-            target['failed_at'] = now_tw_iso()
-        status = write_scheduled_file(
-            posts, sha,
-            f'status: {entry_id[:8]} → {final_status}'
-        )
-        if status in (200, 201):
+        for k, v in kw.items():
+            target[k] = v
+        st = write_scheduled_file(posts, sha, f'status: {entry_id[:8]} → {final_status}')
+        if st in (200, 201):
             return True
-        print(f'  Status update SHA conflict (attempt {attempt+1}/{STATUS_UPDATE_RETRIES})', flush=True)
+        print(f'  Status update SHA conflict (attempt {attempt + 1}/{STATUS_UPDATE_RETRIES})', flush=True)
         time.sleep(2)
-    print(f'::error::最終狀態寫不回 GitHub（{STATUS_UPDATE_RETRIES} 次）：{entry_id[:8]} → {final_status}。'
-          f'租約逾時後會被標成 failed，請到 Threads 確認是否已發出', flush=True)
+    print(f'::error::最終狀態寫不回 GitHub：{entry_id[:8]} → {final_status}', flush=True)
     WRITE_FAILURES.append(f'status {entry_id[:8]}')
     return False
 
 
-# ── Main process flow ────────────────────────────────────────────────────────
-
-def process_one_entry(entry):
-    """Acquire lease → publish → update final status."""
-    entry_id = entry.get('id')
-    print(f'Processing {entry_id[:8]}...', flush=True)
-
-    if not acquire_lease(entry_id):
-        print(f'  Lease not acquired (taken by another runner or status changed); skipping.', flush=True)
-        return
-
-    final_status = 'published'
-    extra = {}
-    try:
-        if entry.get('type') == 'thread':
-            posts = entry.get('posts', [])
-            count, err = publish_thread(posts)
-            if err is None:
-                final_status = 'published'
-            elif count == 0:
-                final_status = 'failed'
-                extra['error'] = err
-            else:
-                final_status = 'partially_published'
-                extra['published_count'] = count
-                extra['total_count'] = len(posts)
-                extra['error'] = err
-        else:
-            # Single post (legacy / API direct call)
-            _, reply_err = publish_single_post(entry.get('content', ''), entry.get('reply_text'))
-            final_status = 'published'
-            if reply_err:
-                extra['reply_error'] = reply_err
-    except Exception as e:
-        final_status = 'failed'
-        extra['error'] = str(e)
-        print(f'  ❌ Failed: {e}', flush=True)
-
-    ok = update_final_status(entry_id, final_status, **extra)
-    if final_status == 'published' and ok:
-        print(f'  ✅ Success: {entry_id[:8]}', flush=True)
-    elif final_status == 'published':
-        print(f'  ⚠️ Published but status not saved: {entry_id[:8]}', flush=True)
-    elif final_status == 'partially_published':
-        print(f'  ⚠️ Partial: {extra.get("published_count")}/{extra.get("total_count")} for {entry_id[:8]}', flush=True)
-    else:
-        print(f'  ❌ Failed: {entry_id[:8]}', flush=True)
-
-
 def cleanup_old_records():
-    """Remove published/cancelled records older than HISTORY_DAYS."""
     posts, sha = read_scheduled_file()
-    now = datetime.now(TW_OFFSET)
-    cutoff = now - timedelta(days=HISTORY_DAYS)
-    cutoff_iso = cutoff.isoformat()
+    cutoff_iso = (now_tw() - timedelta(days=HISTORY_DAYS)).isoformat()
 
     def keep(p):
         if p.get('status') in ('pending', 'in_progress'):
             return True
-        # failed_at（2026-10-18 起）：沒有它時 failed 會退回 created_at，30 天前建的排程一失敗就被清掉
         ts = p.get('published_at') or p.get('failed_at') or p.get('cancelled_at') or p.get('created_at', '')
         return ts >= cutoff_iso
 
     new_posts = [p for p in posts if keep(p)]
     if len(new_posts) == len(posts):
         return
-    status = write_scheduled_file(
-        new_posts, sha,
-        f'chore: cleanup records older than {HISTORY_DAYS} days'
-    )
-    if status in (200, 201):
-        print(f'Cleaned {len(posts) - len(new_posts)} old records.', flush=True)
-    else:
-        print(f'::warning::清理舊紀錄寫回失敗（HTTP {status}），下次再清', flush=True)
+    st = write_scheduled_file(new_posts, sha, f'chore: cleanup records older than {HISTORY_DAYS} days')
+    if st not in (200, 201):
+        print(f'::warning::清理舊紀錄寫回失敗（HTTP {st}），下次再清', flush=True)
+
+
+# ── 各工作 ───────────────────────────────────────────────────────────────────
+
+def cells_of(entry):
+    return [p.get('content', '') for p in sorted(entry.get('posts', []), key=lambda p: p.get('seq', 0))]
+
+
+def token_ok():
+    try:
+        me = threads_get('/me?fields=id,username')
+        return 'id' in me, me.get('username', '')
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)[:120]
+
+
+def reply_permission_ok():
+    """threads_publishing_limit 需要 threads_manage_replies：查得到＝能發串文第 2 格以後。只讀、不發文。"""
+    try:
+        r = threads_get('/me/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config')
+        return 'data' in r, r
+    except urllib.error.HTTPError as e:
+        return False, f'HTTP {e.code} {e.read()[:200]!r}'
+    except Exception as e:  # noqa: BLE001
+        return False, str(e)[:200]
+
+
+def preflight():
+    ok, who = token_ok()
+    if not ok:
+        note(f'Threads token 失效或讀不到（{who}），今天的排程不會發。請換 token（4 個落點，HQ projects/SYS-02-threads.md §B）')
+        return False
+    summary(f'- token：有效（@{who}）')
+    return True
+
+
+def run_publish():
+    now = now_tw()
+    posts, sha = read_scheduled_file()
+    if MODE == 'live' and reset_zombie_leases(posts):
+        if write_scheduled_file(posts, sha, 'chore: mark zombie leases failed') not in (200, 201):
+            WRITE_FAILURES.append('zombie')
+        posts, sha = read_scheduled_file()
+    ready, late, deferred = pc.classify_due(posts, now)
+    for e, why in late:
+        msg = f'Threads 排程 {label(e)} 已晚超過 {pc.LATE_MAX_MINUTES // 60} 小時，不發（{why}）'
+        note(msg)
+        if MODE == 'live':
+            update_entry(e['id'], 'failed', error=msg)
+    for e in deferred:
+        note(f'Threads 排程 {label(e)} 超過單次上限 {pc.MAX_PER_RUN} 則，延到下一次（12:30 那次會補）')
+    if not ready:
+        summary('- 沒有到期的排程')
+        if MODE == 'live':
+            cleanup_old_records()
+        return
+    if not preflight():
+        return
+    for entry in ready:
+        cells = cells_of(entry)
+        ok, code, why = pc.check_entry(entry)
+        summary(f'### {label(entry)}｜{len(cells)} 格｜檢查：{"通過" if ok else why}')
+        if not ok:
+            note(f'Threads 排程 {label(entry)} 不發：{why}')
+            if MODE == 'live':
+                update_entry(entry['id'], 'failed', error=f'{code}: {why}')
+            continue
+        if MODE != 'live':
+            run_publish_dry(entry, cells, now)
+            continue
+        dup = pc.already_posted(cells[0], THREADS_TOKEN, now)
+        if dup:
+            update_entry(entry['id'], 'cancelled', error=f'already_posted: {dup.get("permalink", "")}')
+            note(f'Threads 排程 {label(entry)} 近 48 小時已有首行相同的貼文，不重發')
+            continue
+        wait = (pc.parse_ts(entry['scheduled_at']) - now_tw()).total_seconds()
+        if wait > 0:
+            print(f'  等到排程時間：{int(wait)} 秒', flush=True)
+            time.sleep(wait)
+        if not acquire_lease(entry['id']):        # 等待期間 Tim 取消 → 拿不到租約 → 不發
+            summary('- 拿不到租約（已取消或已被處理），不發')
+            continue
+        ids, err = publish_thread(cells)
+        if err is None:
+            rb = pc.readback(ids, cells, THREADS_TOKEN)
+            update_entry(entry['id'], 'published', post_ids=ids, permalink=rb['permalink'], readback=rb)
+            summary(f'- ✅ 已發 {len(ids)} 格：{rb["permalink"]}｜讀回{"一致" if rb["ok"] else "不一致：" + str(rb["mismatch"])}')
+            if not rb['ok']:
+                note(f'Threads {label(entry)} 已發出，但讀回第 {rb["mismatch"]} 格和核准版不同，請看一下')
+        elif ids:
+            update_entry(entry['id'], 'partially_published', post_ids=ids, published_count=len(ids),
+                         total_count=len(cells), error=err)
+            note(f'Threads {label(entry)} 只發出 {len(ids)}/{len(cells)} 格就失敗（不自動重試，避免重複）。'
+                 f'請在 App 手動接上剩下的格，或刪掉重發')
+        else:
+            update_entry(entry['id'], 'failed', error=err)
+            note(f'Threads {label(entry)} 第 1 格就發布失敗，沒有發出任何內容：{err[:80]}')
+    cleanup_old_records()
+
+
+def run_publish_dry(entry, cells, now):
+    """空跑：不發、不寫佇列。驗回覆權限，並為每格建一個不發布的容器，確認 API 收得下這些字。"""
+    rec = {'task': 'publish', 'date': entry['scheduled_at'][:10], 'entry': entry['id'], 'title': entry.get('title', ''),
+           'cells': len(cells), 'hash_ok': True, 'at': now_tw_iso()}
+    perm, detail = reply_permission_ok()
+    rec['reply_permission'] = perm
+    summary(f'- 回覆權限（串文第 2 格以後要用）：{"有" if perm else "沒有／讀不到"}')
+    if not perm:
+        note(f'Threads 空跑：token 沒有發回覆的權限（threads_manage_replies），正式發文會只發出第 1 格。{str(detail)[:80]}')
+    bad = []
+    for i, c in enumerate(cells, 1):
+        try:
+            create_container(pc.normalize_cell(c))      # 不呼叫 threads_publish ＝ 不公開
+        except Exception as e:  # noqa: BLE001
+            bad.append(f'第 {i} 格：{str(e)[:80]}')
+    rec['container_errors'] = bad
+    summary(f'- 逐格建立不發布的容器：{"全部成功" if not bad else "；".join(bad)}')
+    if bad:
+        note(f'Threads 空跑 {label(entry)}：API 不收這些格 → {"；".join(bad)}')
+    for i, c in enumerate(cells, 1):
+        summary(f'  - 第 {i} 格：{pc.weighted_len(pc.normalize_cell(c))} 字元｜{pc.first_line(c)[:30]}')
+    append_dry_log(rec)
+
+
+def today_entries(posts, now):
+    d = now.date().isoformat()
+    return [e for e in posts if (e.get('scheduled_at') or '')[:10] == d and pc.parse_ts(e['scheduled_at']) <= now]
+
+
+def run_compare():
+    now = now_tw()
+    posts, _ = read_scheduled_file()
+    todays = today_entries(posts, now)
+    if not todays:
+        summary('- 今天沒有已到期的排程')
+        return
+    if not preflight():
+        return
+    for e in todays:
+        cells = cells_of(e)
+        if MODE == 'live':
+            if e.get('status') == 'pending':
+                ok, st, _ = dispatch(PUBLISH_WORKFLOW, {'task': 'publish'})
+                if ok:
+                    note(f'Threads {label(e)} 11:00 沒發出，12:30 補發一次（請之後看一下）')
+                else:
+                    note(f'Threads {label(e)} 11:00 沒發出，補發觸發失敗（HTTP {st}；暫停中也會這樣）')
+            summary(f'- {label(e)}：{e.get("status")}')
+            continue
+        root, got = pc.find_manual_thread(cells, THREADS_TOKEN, now)
+        rec = {'task': 'compare', 'date': now.date().isoformat(), 'entry': e['id'], 'title': e.get('title', ''),
+               'cells': len(cells), 'at': now_tw_iso()}
+        if not root:
+            rec['result'] = 'not_found'
+            summary(f'- {label(e)}：找不到你今天手發、首行相同的那篇（還沒發或改了標題），記入週日彙總')
+        else:
+            diffs = pc.diff_cells(cells, got)
+            rec.update(result='same' if not diffs else 'diff', diffs=diffs, permalink=root.get('permalink', ''))
+            summary(f'- {label(e)}：與你手發的版本{"逐格一致" if not diffs else "有差異"}')
+            for d in diffs:
+                summary(f'  - {d}')
+            if diffs:
+                note(f'Threads 空跑比對 {label(e)}：和你手發的版本有 {len(diffs)} 處不同（可能是你發文時改的）。'
+                     f'明細看 GitHub Actions「Threads Publish Follow-up」今天那次')
+        append_dry_log(rec)
+
+
+def run_watch():
+    now = now_tw()
+    today = now.date().isoformat()
+    posts, _ = read_scheduled_file()
+    due = [e for e in today_entries(posts, now)]
+    if due:
+        pub = runs_today(PUBLISH_WORKFLOW, today)
+        fol = runs_today(FOLLOWUP_WORKFLOW, today)
+        if pub is not None and not pub:
+            note('Threads 排程：今天有到期的串文，但 10:57 的發文觸發（QStash）沒有跑')
+        if fol is not None and not fol:
+            note('Threads 排程：12:30 的比對／補發觸發（QStash）今天沒有跑')
+        if MODE == 'live':
+            for e in due:
+                if e.get('status') == 'pending' and now - pc.parse_ts(e['scheduled_at']) > timedelta(minutes=30):
+                    note(f'Threads {label(e)} 到現在還沒發出')
+    summary(f'- 巡看：今天到期 {len(due)} 則')
+    if now.weekday() == 6:                      # 週日彙總（空跑期；Tim 2026-10-28 D3）
+        weekly_digest(now)
+    token_reminder(now)
+
+
+def weekly_digest(now):
+    try:
+        log, _ = read_json_file(DRY_LOG_PATH)
+    except Exception as e:  # noqa: BLE001
+        note(f'Threads 週彙總讀不到空跑紀錄：{e}')
+        return
+    since = (now - timedelta(days=7)).date().isoformat()
+    recent = [r for r in (log or []) if r.get('date', '') >= since]
+    if MODE != 'live' and not recent:
+        return
+    pubs = [r for r in recent if r.get('task') == 'publish']
+    cmps = [r for r in recent if r.get('task') == 'compare']
+    same = sum(r.get('result') == 'same' for r in cmps)
+    diff = sum(r.get('result') == 'diff' for r in cmps)
+    nf = sum(r.get('result') == 'not_found' for r in cmps)
+    bad = sum(bool(r.get('container_errors')) or r.get('reply_permission') is False for r in pubs)
+    NOTES.append(f'📋 Threads 排程空跑週彙總（{since}～{now.date().isoformat()}）：發文空跑 {len(pubs)} 次、'
+                 f'其中有問題 {bad} 次；與你手發比對 一致 {same}／不同 {diff}／找不到 {nf}。'
+                 f'正式上線前至少要 2 週、5 次（RCF-278）')
+
+
+def token_reminder(now):
+    if not TOKEN_EXPIRES_ON:
+        return
+    try:
+        left = (datetime.fromisoformat(TOKEN_EXPIRES_ON).date() - now.date()).days
+    except ValueError:
+        return
+    if left <= 3 or (left <= 14 and now.weekday() == 6):
+        NOTES.append(f'⏰ Threads token 還有 {left} 天到期（{TOKEN_EXPIRES_ON}），到期當天 11:00 就發不出去。'
+                     f'請換 token（4 個落點）並改 workflow 的 THREADS_TOKEN_EXPIRES_ON')
+
+
+def run_probe():
+    ok = preflight()
+    perm, detail = reply_permission_ok()
+    summary(f'- 回覆權限：{"有" if perm else "沒有"}｜{str(detail)[:200]}')
+    if ok:
+        try:
+            cid = create_container('（看板排程實測：不發布的容器）')
+            summary(f'- 建立不發布的容器：成功（{cid}）')
+        except Exception as e:  # noqa: BLE001
+            summary(f'- 建立不發布的容器：失敗 {str(e)[:200]}')
+            note(f'Threads probe：建立容器失敗 {str(e)[:80]}')
+    if not perm:
+        note('Threads probe：token 沒有發回覆的權限，串文第 2 格以後會失敗')
 
 
 def main():
-    check_env()
-    now_tw = datetime.now(TW_OFFSET)
-    print(f'Run start: {now_tw.strftime("%Y-%m-%d %H:%M:%S TW")}', flush=True)
-
-    # Step 1: Sweep zombie leases
-    posts, sha = read_scheduled_file()
-    if reset_zombie_leases(posts):
-        zs = write_scheduled_file(posts, sha, 'chore: mark zombie leases failed')
-        if zs not in (200, 201):
-            print(f'::error::殭屍租約標 failed 寫回失敗（HTTP {zs}）', flush=True)
-            WRITE_FAILURES.append('zombie')
-        posts, sha = read_scheduled_file()
-
-    # Step 2: Find due entries
-    due = []
-    for p in posts:
-        if p.get('status') != 'pending':
-            continue
-        try:
-            scheduled = dateparser.parse(p['scheduled_at'])
-            if scheduled.tzinfo is None:
-                scheduled = scheduled.replace(tzinfo=TW_OFFSET)
-            if scheduled <= now_tw:
-                due.append(p)
-        except Exception as e:
-            print(f'  Skipping malformed scheduled_at for {p.get("id","?")}: {e}', flush=True)
-
-    if not due:
-        print('No entries due. Cleanup and exit.', flush=True)
-        cleanup_old_records()
-        finish()
-        return
-
-    print(f'{len(due)} entry(ies) due for publishing.', flush=True)
-
-    # Step 3: Process each due entry
-    for entry in due:
-        process_one_entry(entry)
-        time.sleep(2)
-
-    # Step 4: Cleanup
-    cleanup_old_records()
-    print('Run complete.', flush=True)
+    if not GITHUB_TOKEN or not THREADS_TOKEN:
+        print('ERROR: GITHUB_TOKEN 或 THREADS_ACCESS_TOKEN 未設定', flush=True)
+        sys.exit(1)
+    if MODE not in ('dry', 'live'):
+        print(f'ERROR: PUBLISH_MODE 只能是 dry／live，收到 {MODE!r}', flush=True)
+        sys.exit(1)
+    summary(f'## Threads 排程｜{TASK}｜模式 {MODE}｜{now_tw().strftime("%Y-%m-%d %H:%M")} 台灣')
+    {'publish': run_publish, 'compare': run_compare, 'watch': run_watch, 'probe': run_probe}[TASK]()
     finish()
 
 
 def finish():
+    out = os.environ.get('GITHUB_STEP_SUMMARY')
+    if out:
+        with open(out, 'a', encoding='utf-8') as f:
+            f.write('\n'.join(SUMMARY) + '\n')
+    rc = notify_line.send(NOTES) if NOTES else 0
     if WRITE_FAILURES:
         print(f'::error::寫回 GitHub 失敗 {len(WRITE_FAILURES)} 處：{", ".join(WRITE_FAILURES)}', flush=True)
+        sys.exit(1)
+    if rc:
         sys.exit(1)
 
 

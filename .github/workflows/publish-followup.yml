@@ -1,0 +1,57 @@
+name: Threads Publish Follow-up
+
+# 2026-10-28 新增（HQ RCF-278）：和 publish-scheduled.yml 分開，HQ 巡查（A-09）依 workflow 名稱看最近一次結果，
+# 放在一起會讓 12:30 的成功蓋掉 11:00 的失敗。
+# - workflow_dispatch（Upstash QStash 每天台灣 12:30）：TASK=compare——空跑時讀 Tim 手發的那串逐格比對；
+#   正式時當天還沒發的觸發 publish-scheduled.yml 補發一次（本檔自己不發文）。
+# - schedule（GitHub 自己的排程，實際約晚 4 小時）：TASK=watch——只看不發：今天該跑的沒跑、還沒發出、週日彙總、token 到期。
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'compare＝比對／補發；watch＝只看不發'
+        default: 'compare'
+        type: choice
+        options: [compare, watch]
+  schedule:
+    - cron: '30 4 * * *'   # UTC 04:30＝台灣 12:30；實際多半 13 點後才跑，只當巡看用
+
+concurrency:
+  group: threads-publish
+  cancel-in-progress: false
+
+jobs:
+  followup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    permissions:
+      contents: write   # data/publish-dry-log.json
+      actions: write    # 補發＝觸發 publish-scheduled.yml；巡看讀今天的執行紀錄
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Follow-up
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+          PUBLISH_MODE: dry
+          TASK: ${{ github.event_name == 'schedule' && 'watch' || inputs.task || 'compare' }}
+          THREADS_TOKEN_EXPIRES_ON: '2026-12-15'
+        run: python scripts/publish_scheduled.py
+
+      - name: 失敗通知
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+        run: python scripts/notify_line.py --event failure --workflow publish-followup.yml

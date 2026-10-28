@@ -1,21 +1,37 @@
 name: Publish Scheduled Threads Posts
 
+# 2026-10-28 改版（HQ RCF-278，tasks「Threads 日更改由看板排程發出」）：
+# - 觸發＝Upstash QStash 每天台灣 10:57 打 workflow_dispatch（GitHub 自己的排程實際晚 4 小時以上，
+#   10-20～10-27 八次都在台灣 13:16～13:50 才跑），所以本檔不再有 schedule（原 cron '0 1 * * *'）。
+# - ⛔ 所有真正發文只在本檔發生（12:30 的補發也是觸發本檔）⇒ 停用本檔（HQ schedule_control.py pause A-28）＝全部停住。
+# - PUBLISH_MODE：dry＝空跑（不寫佇列、不發文）。空跑 ≥2 週、≥5 次，Tim 看過才改 live（HQ routine-automation-sop 第六節）。
+# - 換 Threads token 時一起改 THREADS_TOKEN_EXPIRES_ON（到期前 14 天起週日提醒、3 天內每天提醒）。
 on:
-  schedule:
-    # Once daily at UTC 01:00 (台灣 09:00). 降頻自 */30（2026-07-10）：
-    # 排程發文功能自 2026-04 起閒置（scheduled-posts.json 長期為 []），Tim 實際發文走手動/Threads週規劃，
-    # 每 30 分空跑只是噪音源。⚠️ 若未來重新啟用看板排程發文，須恢復較高頻率（如 */30），否則排程貼文最多延遲 24h。
-    - cron: '0 1 * * *'
-  workflow_dispatch:   # 手動觸發，供測試使用
+  workflow_dispatch:
+    inputs:
+      task:
+        description: 'publish＝發到期的串文；probe＝只驗 token／回覆權限／建不發布的容器'
+        default: 'publish'
+        type: choice
+        options: [publish, probe]
+      notify_test:
+        description: '推一則 LINE 測試訊息'
+        default: false
+        type: boolean
+
+concurrency:
+  group: threads-publish        # 與 publish-followup.yml 共用：同一時間只跑一個，避免重複發
+  cancel-in-progress: false
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     env:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     permissions:
-      contents: write   # 允許寫回 scheduled-posts.json
-
+      contents: write   # live 寫回 scheduled-posts.json；dry 只寫 data/publish-dry-log.json
+      actions: read     # 失敗通知讀前幾次結果
     steps:
       - uses: actions/checkout@v5
 
@@ -24,11 +40,35 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: pip install python-dateutil
+      - name: Selftest controls
+        run: |
+          python scripts/publish_controls.py
+          python scripts/notify_line.py --selftest
+          python tests/test_publish_scheduled.py
+
+      - name: LINE 測試訊息
+        if: ${{ inputs.notify_test }}
+        env:
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+        run: python scripts/notify_line.py --event test
 
       - name: Publish due scheduled posts
+        if: ${{ !inputs.notify_test }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+          PUBLISH_MODE: dry
+          TASK: ${{ inputs.task || 'publish' }}
+          THREADS_TOKEN_EXPIRES_ON: '2026-12-15'
         run: python scripts/publish_scheduled.py
+
+      - name: 失敗通知
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
+          LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
+        run: python scripts/notify_line.py --event failure --workflow publish-scheduled.yml
