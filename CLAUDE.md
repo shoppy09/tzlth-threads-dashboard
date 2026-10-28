@@ -182,6 +182,7 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 - `GET /api/threads-data`：代理讀取本 repo raw 的 threads-data.json（2026-10-28 起不帶 token；**免登入**）
 - `GET /api/followers`：代理讀取 follower-history.json（**免登入**）
 - `GET/POST/DELETE /api/scheduled`：排程貼文清單讀寫 `data/scheduled-posts.json`（GITHUB_SCHEDULE_TOKEN；需登入）
+  - ⛔ **2026-10-28 起（HQ RCF-278）佇列只發 HQ 核准過的串文**：`approved_hash` 由 HQ `scripts/threads_queue.py approve` 寫入；網頁「新增排程」建的沒有核准欄位，排程程式不發、會推 LINE（Tim D4）。網頁「取消」仍有效（11:00 前）
 - `GET /api/version`：回報正在服務的部署（commit／deployment／node／region；**免登入**）
 - 共 11 支＝11 個函數；免費方案不用框架時上限 12（Vercel 官方 runtimes 頁，2026-10-03 查）
 
@@ -214,7 +215,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 ## 待改進項目
 - 串文（isQuotePost）判斷依賴 Threads API is_quote_post 欄位
-- 長文串文 Phase 3：排程串文 + 圖片發文支援
+- 長文串文 Phase 3：~~排程串文~~（2026-10-28 HQ RCF-278 排程串文上線＝Threads 日更 A-28，空跑中）＋ 圖片發文支援
 - start-dashboard.bat 可自動遞增 cache 版本號
 
 ---
@@ -239,6 +240,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-28 | 【DEV/SOC】**Threads 日更改由排程發出（HQ RCF-278）**：`7a65750` 補對外控制 a～g、dry／live、四種 TASK、兩支 workflow、LINE 通知、測試 28 項；`376d311` 空跑只看當天。probe run 40624705211 回覆權限有；空跑比對 run 40624873788 10-28 逐格一致。空跑中，待 Tim 建 QStash 與貼 LINE secrets | HQ 本場 | 🧪 |
 | 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ✅ Tim 點按鈕確認 |
 | 2026-10-28 | 【DEV/SEC】**讀公開檔不再帶 token、不會掛住（HQ 資安稽核 10-17 ⑩ 換 token 時撞出）**：classic token 刪除後 `/api/threads-data`、`followers`、`weekly-report` 掛到逾時（帶失效 token 讀公開原檔 404、`JSON.parse` 在 callback 丟例外）；新 `lib/public-raw.js`。本機帶失效 PAT 三支 200、舊版 20 秒無回應。詳 archive | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SOC】**串文全格（HQ tasks L831）**：`GET /me/replies` 依 replied_to 串接、排除回覆讀者，寫獨立檔 `thread-parts.json`（放進 threads-data.json 會逼近 Vercel 4.5MB）；cron.yml push 加重試。`6be26ac`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
@@ -258,6 +260,6 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 - 系統代號：SYS-02
 - 總部路徑：C:\Users\USER\Desktop\tzlth-hq
 - HQ 角色：Threads 內容的數據中心。追蹤發文績效、追蹤者成長、提供 AI 內容建議，支撐行銷部決策。
-- 存檔規定：資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00 台灣時間）自動 fetch + git commit + push。手動發文時 pub-history.json 自動記錄。Claude 手動修改任何檔案後必須立即 push。
+- 存檔規定：資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00 台灣時間）自動 fetch + git commit + push。手動發文時 pub-history.json 自動記錄（本機 server.js 版）。**Threads 日更排程發文（A-28，HQ RCF-278）**：`scripts/publish_scheduled.py`（PUBLISH_MODE dry／live；TASK publish／compare／watch／probe）＋`publish_controls.py`＋`notify_line.py`；`publish-scheduled.yml`（QStash 10:57，所有發文只在這支）、`publish-followup.yml`（QStash 12:30 比對／補發；GitHub 排程只看不發）；空跑紀錄 `data/publish-dry-log.json`；測試 `tests/test_publish_scheduled.py`。Claude 手動修改任何檔案後必須立即 push。
 - 拉取欄位：follower-history.json（追蹤者數）、threads-data.json 最後 20 筆（近期貼文績效）、threads-data.json `fetchedAt`（確認 ≤24h，取代已棄用的 auto-fetch.log）
 ---
