@@ -370,6 +370,9 @@ def run_publish():
         if write_scheduled_file(posts, sha, 'chore: mark zombie leases failed') not in (200, 201):
             WRITE_FAILURES.append('zombie')
         posts, sha = read_scheduled_file()
+    if MODE != 'live':
+        # 空跑不寫佇列 ⇒ 昨天的 pending 永遠是 pending；只看今天的，否則之後每天都會報「晚了不發」（2026-10-28 實作時撈出）
+        posts = [e for e in posts if (e.get('scheduled_at') or '')[:10] == now.date().isoformat()]
     ready, late, deferred = pc.classify_due(posts, now)
     for e, why in late:
         msg = f'Threads 排程 {label(e)} 已晚超過 {pc.LATE_MAX_MINUTES // 60} 小時，不發（{why}）'

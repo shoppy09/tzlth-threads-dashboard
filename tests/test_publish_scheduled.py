@@ -243,6 +243,11 @@ w = World([entry()], datetime(2026, 10, 29, 13, 30, tzinfo=pc.TW),
 run(w, 'dry', 'watch')
 ck('巡看：都有跑就不推（非週日）', not ps.NOTES, ps.NOTES)
 
+# 13b 空跑：昨天的 pending 不再報「晚了」（空跑不寫佇列，昨天那筆永遠是 pending）
+w = World([entry(when='2026-10-28T11:00:00+08:00')], T1057)
+run(w, 'dry', 'publish')
+ck('空跑只看今天：昨天的不報晚', not ps.NOTES, ps.NOTES)
+
 # 14 空跑模式下任何寫佇列的呼叫都會被擋
 ps.MODE = 'dry'
 try:
