@@ -9,12 +9,12 @@
 - **部署平台**：Vercel（Serverless Functions，api/ 目錄）+ GitHub Actions（cron 資料同步）
 - **本機開發**：node server.js（port 3939）；server.js 保留供本機除錯，不部署至 Vercel
 - **資料同步**：由 **HQ** 的 `fetch-threads.yml` 排定每日台灣 09:00／21:00 執行本 repo 的 fetch-threads.js，commit threads-data.json + follower-history.json 回本 repo（實際到達常晚 5.5-7 小時）。本 repo 的 `cron.yml` **只剩手動觸發**（「立即同步」按鈕用），沒有排程（2026-10-03 更正，架構全貌見 HQ `projects/SYS-02-threads.md`）
-- **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；GITHUB_PAT 可選，預防未來轉 private）
+- **資料讀取**：Vercel Functions 透過 GitHub raw URL 讀取（repo 為 public，branch: master；2026-10-28 起**不帶任何 token**，`lib/public-raw.js` 看狀態碼、逾時 15 秒——帶失效 token 讀公開檔會 404 並讓函式掛住，見修改記錄）
 - **AI**：Google Gemini API（**`gemini-3.1-flash-lite`**，直接 HTTPS 呼叫）。⚠️ 刻意不用 `gemini-flash-latest` 滾動別名——別名會被靜默熱抽換（官方僅承諾 2 週預告），而本站 AI 端點吃 30s 硬砍；釘版另使 soplint I13 能倒數退場日（`shutdown_date=null` 的別名 I13 直接跳過）。⛔ **2026-09-08 由 `gemini-2.5-flash` 遷移**（該版 2026-10-16 退場，RCF-123 補記三）：四個呼叫點（`api/nl-convert.js`／`api/ai-split-thread.js`／`server.js` ×2）同批換版並全數補 `generationConfig.thinkingConfig.thinkingBudget: 0`——其中 `nl-convert` 原本**連 `generationConfig` 都沒有**，等於 thinking 全開跑在 30s 砍線上。選 `3.1-flash-lite` 而非 `3.5-flash-lite`：後者**拒收 `thinkingConfig` 回 HTTP 400**（三次全失敗，照原案施工＝每次呼叫全掛）；亦非 `3.8-flash`（最慢 2.40s 且測試中 503/429 不穩）。實測 3.1-flash-lite 結構化負載中位 0.99s／最慢 1.03s，離散度最小。全文＝tzlth-hq `dev/gemini-migration-benchmark-2026-09-08.md`。⚠️ 原記「2.5-flash 實測 11.7s 正常」為 thinking 開啟時的舊值，換版後不再是本站的延遲基準。
 - **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定
-- **Vercel 環境變數（必填，6 個）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（需要 repo + workflow scope）/ BASIC_AUTH_USER / BASIC_AUTH_PASSWORD（`middleware.js` 登入擋門，未設＝全站 503）/ GITHUB_SCHEDULE_TOKEN（`api/scheduled.js`）。2026-10-03 `vercel env ls` 與程式碼逐一對上；原只列前 3 個
+- **Vercel 環境變數（必填，6 個）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（2026-10-28 起只剩 `api/trigger-sync.js` 手動同步用；原值是已刪除的 classic token `tzlth-hq-dashboard` ⇒ 目前按手動同步會回 502「PAT 可能失效」，換新或移除見 HQ tasks「看板手動同步按鈕的 token 已失效」）/ BASIC_AUTH_USER / BASIC_AUTH_PASSWORD（`middleware.js` 登入擋門，未設＝全站 503）/ GITHUB_SCHEDULE_TOKEN（`api/scheduled.js`）。2026-10-03 `vercel env ls` 與程式碼逐一對上；原只列前 3 個
 - **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
 - **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 為廢棄設定已無效；**自動部署已透過 Ignored Build Step（Don't build anything / exit 0）正確停用**（2026-04-29 實際設定完成）
 - **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額（2026-09-28 實數：原記 11 時實為 10，加 `version.js` 後才是 11）。新增任何 api/*.js 前必須先確認總數不超過 12
@@ -239,6 +239,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-28 | 【DEV/SEC】**讀公開檔不再帶 token、不會掛住（HQ 資安稽核 10-17 ⑩ 換 token 時撞出）**：classic token 刪除後 `/api/threads-data`、`followers`、`weekly-report` 掛到逾時（帶失效 token 讀公開原檔 404、`JSON.parse` 在 callback 丟例外）；新 `lib/public-raw.js`。本機帶失效 PAT 三支 200、舊版 20 秒無回應。詳 archive | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SOC】**串文全格（HQ tasks L831）**：`GET /me/replies` 依 replied_to 串接、排除回覆讀者，寫獨立檔 `thread-parts.json`（放進 threads-data.json 會逼近 Vercel 4.5MB）；cron.yml push 加重試。`6be26ac`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SEC】**寫入失敗與跨站防護（HQ 批次:B38）**：寫入類 API 同源＋JSON（`lib/request-guard.js`）、立即同步 POST 看 204、排程逾時標 failed 不重發＋failed_at、抓取器指標失敗沿用舊值過半不寫檔、server.js 綁 localhost。`f06b552`／`66588c3`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-15 | 【DEV】**部署結果比對（HQ L879，RCF-246）**：總部 `deploy_status.py 看板` 讀本 repo `/api/version`（10-15 線上 21e4f9b，之後只改不需部署的檔＝成功）；本檔部署行補「部署前先 commit、部署後查」。零程式碼改動。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |

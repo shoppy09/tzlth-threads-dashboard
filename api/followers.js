@@ -1,17 +1,9 @@
-const https = require('https');
+const { getPublicJson } = require('../lib/public-raw');
 
 module.exports = async (req, res) => {
   try {
-    const headers = { 'User-Agent': 'tzlth-dashboard' };
-    const pat = process.env.GITHUB_PAT;
-    if (pat) headers['Authorization'] = `token ${pat}`;
-    const data = await new Promise((resolve, reject) => {
-      https.get(
-        'https://raw.githubusercontent.com/shoppy09/tzlth-threads-dashboard/master/follower-history.json',
-        { headers },
-        r => { let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(JSON.parse(d))); }
-      ).on('error', reject);
-    });
+    // 公開檔不帶 token、看狀態碼、不會掛住（2026-10-28，見 lib/public-raw.js）
+    const data = await getPublicJson('follower-history.json');
     res.json(data);   // 返回 array，格式與原 /api/followers 相同
   } catch (e) {
     res.status(500).json({ error: e.message });
