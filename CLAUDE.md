@@ -14,7 +14,7 @@
 - **線上 URL**：https://threads-dashboard-lime.vercel.app
 
 ## 重要設定
-- **Vercel 環境變數（必填，6 個）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / GITHUB_PAT（2026-10-28 起只剩 `api/trigger-sync.js` 手動同步用；原值是已刪除的 classic token `tzlth-hq-dashboard` ⇒ 目前按手動同步會回 502「PAT 可能失效」，換新或移除見 HQ tasks「看板手動同步按鈕的 token 已失效」）/ BASIC_AUTH_USER / BASIC_AUTH_PASSWORD（`middleware.js` 登入擋門，未設＝全站 503）/ GITHUB_SCHEDULE_TOKEN（`api/scheduled.js`）。2026-10-03 `vercel env ls` 與程式碼逐一對上；原只列前 3 個
+- **Vercel 環境變數（必填，5 個）**：THREADS_ACCESS_TOKEN / GOOGLE_AI_API_KEY / BASIC_AUTH_USER / BASIC_AUTH_PASSWORD（`middleware.js` 登入擋門，未設＝全站 503）/ GITHUB_SCHEDULE_TOKEN（`api/scheduled.js`）。2026-10-03 `vercel env ls` 與程式碼逐一對上；原只列前 3 個。⛔ **GITHUB_PAT 2026-10-28 已刪除**（原值是已刪的 classic token；Tim 照建議選「刪掉、按鈕改說明」，HQ tasks「看板手動同步按鈕的 token 已失效」）：手動同步按鈕改走「未設定」分支，顯示每日自動同步說明；要恢復手動觸發＝建只開本 repo Actions 讀寫的 fine-grained token 設回 GITHUB_PAT
 - **本機 .env**：THREADS_ACCESS_TOKEN, TOKEN_CREATED_AT, GOOGLE_AI_API_KEY（本機開發用）
 - **vercel.json**：maxDuration 60s（publish-single）/ 30s（nl-convert, ai-split-thread）；`"github":{"enabled":false}` 為廢棄設定已無效；**自動部署已透過 Ignored Build Step（Don't build anything / exit 0）正確停用**（2026-04-29 實際設定完成）
 - **⚠️ Hobby plan 12 函數上限**：目前 api/ 有 11 個檔案 = 11 個 Serverless Functions，剩餘 1 個名額（2026-09-28 實數：原記 11 時實為 10，加 `version.js` 後才是 11）。新增任何 api/*.js 前必須先確認總數不超過 12
@@ -123,7 +123,7 @@ curl "https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_KEY"
 - **Error Boundaries**：generateInsights/Health/Suggestions 用 try-catch 包裝，錯誤時顯示友善訊息
 
 ## syncBtn 操作說明
-- 點擊 → **POST** `api/trigger-sync.js`（JSON）觸發**本 repo** `cron.yml` 的 workflow_dispatch（需 GITHUB_PAT env var；跑的是本 repo GitHub Secrets 裡的 THREADS_ACCESS_TOKEN）；GitHub 回 204 才顯示 ✅，其餘顯示 ❌＋原因（2026-10-18 起，原本 GET、不看回應）
+- ⚠️ **2026-10-28 起 GITHUB_PAT 已刪除** ⇒ 按鈕一律走下一行「未設定」分支，前端顯示 ℹ️「每日自動」＋說明（原顯示 ✅「已更新」與事實不符，已改）。以下為設定 GITHUB_PAT 時的行為：點擊 → **POST** `api/trigger-sync.js`（JSON）觸發**本 repo** `cron.yml` 的 workflow_dispatch（需 GITHUB_PAT env var；跑的是本 repo GitHub Secrets 裡的 THREADS_ACCESS_TOKEN）；GitHub 回 204 才顯示 ✅，其餘顯示 ❌＋原因（2026-10-18 起，原本 GET、不看回應）
 - 若未設定 GITHUB_PAT → 顯示「資料每日 09:00 / 21:00（台灣時間）由 tzlth-hq fetch-threads.yml 自動更新」說明訊息（`app.js`／`api/trigger-sync.js` 實際字串，2026-10-03 對過）
 - 定時更新由 **HQ** `fetch-threads.yml` 執行，本 repo `cron.yml` 沒有排程
 
@@ -178,8 +178,8 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 - `GET /api/weekly-report`：讀本 repo（public）raw 的 threads-data.json 計算週報（需登入）
 - `POST /api/nl-convert`：Gemini 自然語言轉換
 - `POST /api/ai-split-thread`：Gemini 長文串文切割
-- `POST /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT；只收 JSON）
-- `GET /api/threads-data`：代理讀取本 repo raw 的 threads-data.json（GITHUB_PAT 可選；**免登入**）
+- `POST /api/trigger-sync`：觸發 GitHub Actions workflow_dispatch（需 GITHUB_PAT；只收 JSON；⚠️ 2026-10-28 起未設定，固定回 `triggered:false`＋每日自動同步說明）
+- `GET /api/threads-data`：代理讀取本 repo raw 的 threads-data.json（2026-10-28 起不帶 token；**免登入**）
 - `GET /api/followers`：代理讀取 follower-history.json（**免登入**）
 - `GET/POST/DELETE /api/scheduled`：排程貼文清單讀寫 `data/scheduled-posts.json`（GITHUB_SCHEDULE_TOKEN；需登入）
 - `GET /api/version`：回報正在服務的部署（commit／deployment／node／region；**免登入**）
@@ -239,6 +239,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ⏳ 待 Tim 點按鈕 |
 | 2026-10-28 | 【DEV/SEC】**讀公開檔不再帶 token、不會掛住（HQ 資安稽核 10-17 ⑩ 換 token 時撞出）**：classic token 刪除後 `/api/threads-data`、`followers`、`weekly-report` 掛到逾時（帶失效 token 讀公開原檔 404、`JSON.parse` 在 callback 丟例外）；新 `lib/public-raw.js`。本機帶失效 PAT 三支 200、舊版 20 秒無回應。詳 archive | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SOC】**串文全格（HQ tasks L831）**：`GET /me/replies` 依 replied_to 串接、排除回覆讀者，寫獨立檔 `thread-parts.json`（放進 threads-data.json 會逼近 Vercel 4.5MB）；cron.yml push 加重試。`6be26ac`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SEC】**寫入失敗與跨站防護（HQ 批次:B38）**：寫入類 API 同源＋JSON（`lib/request-guard.js`）、立即同步 POST 看 204、排程逾時標 failed 不重發＋failed_at、抓取器指標失敗沿用舊值過半不寫檔、server.js 綁 localhost。`f06b552`／`66588c3`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |

@@ -1599,8 +1599,10 @@ document.getElementById('syncBtn').addEventListener('click', async () => {
     let data = {};
     try { data = await res.json(); } catch {}
     if (!res.ok) throw new Error(data.message || data.error || `HTTP ${res.status}`);
-    icon.textContent = '✅';
-    text.textContent = data.triggered ? '已觸發' : '已更新';
+    // 2026-10-28（HQ 甲場，tasks「看板手動同步按鈕的 token 已失效」）：GITHUB_PAT 已移除，
+    // 後端走「未設定」分支回 triggered:false＋說明；原本顯示「✅ 已更新」與事實不符（沒有更新任何東西）
+    icon.textContent = data.triggered ? '✅' : 'ℹ️';
+    text.textContent = data.triggered ? '已觸發' : '每日自動';
     status.textContent = data.triggered
       ? '已觸發 GitHub Actions，約 7-9 分鐘後更新'
       : (data.message || '資料每日 09:00 / 21:00（台灣時間）自動更新');
