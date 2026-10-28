@@ -239,7 +239,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
-| 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ⏳ 待 Tim 點按鈕 |
+| 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ✅ Tim 點按鈕確認 |
 | 2026-10-28 | 【DEV/SEC】**讀公開檔不再帶 token、不會掛住（HQ 資安稽核 10-17 ⑩ 換 token 時撞出）**：classic token 刪除後 `/api/threads-data`、`followers`、`weekly-report` 掛到逾時（帶失效 token 讀公開原檔 404、`JSON.parse` 在 callback 丟例外）；新 `lib/public-raw.js`。本機帶失效 PAT 三支 200、舊版 20 秒無回應。詳 archive | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SOC】**串文全格（HQ tasks L831）**：`GET /me/replies` 依 replied_to 串接、排除回覆讀者，寫獨立檔 `thread-parts.json`（放進 threads-data.json 會逼近 Vercel 4.5MB）；cron.yml push 加重試。`6be26ac`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
 | 2026-10-18 | 【DEV/SEC】**寫入失敗與跨站防護（HQ 批次:B38）**：寫入類 API 同源＋JSON（`lib/request-guard.js`）、立即同步 POST 看 204、排程逾時標 failed 不重發＋failed_at、抓取器指標失敗沿用舊值過半不寫檔、server.js 綁 localhost。`f06b552`／`66588c3`。全文見 `CLAUDE-archive-2026-10.md` | 總部視窗 | ✅ |
