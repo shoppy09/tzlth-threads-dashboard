@@ -142,5 +142,24 @@
     "approved_at": "2026-10-28T16:20:41+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-10-31-Threads-顧問觀察兩個目標.md"
+  },
+  {
+    "id": "a711ce3a-728c-491c-a3d0-013d6d5a18a5",
+    "type": "thread",
+    "posts": [
+      {
+        "seq": 1,
+        "content": "【測試｜看板面板驗收，會取消並移除】示範項第 1 格"
+      },
+      {
+        "seq": 2,
+        "content": "示範項第 2 格"
+      }
+    ],
+    "scheduled_at": "2026-11-25T03:00:00.000Z",
+    "status": "pending",
+    "created_at": "2026-10-29T00:38:03.199Z",
+    "published_at": null,
+    "error": null
   }
 ]
