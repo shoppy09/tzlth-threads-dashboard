@@ -183,6 +183,9 @@ Phase 1 只做切割+預覽，實際發文（reply_to_id）在 Phase 2 實作。
 - `GET /api/followers`：代理讀取 follower-history.json（**免登入**）
 - `GET/POST/DELETE /api/scheduled`：排程貼文清單讀寫 `data/scheduled-posts.json`（GITHUB_SCHEDULE_TOKEN；需登入）
   - ⛔ **2026-10-28 起（HQ RCF-278）佇列只發 HQ 核准過的串文**：`approved_hash` 由 HQ `scripts/threads_queue.py approve` 寫入；網頁「新增排程」建的沒有核准欄位，排程程式不發、會推 LINE（Tim D4）。網頁「取消」仍有效（11:00 前）
+  - **2026-10-29 排程面板**（「✏️ 創作工具箱」→「📋 排程管理」）：每篇可展開全文；顯示核准時間＋「雜湊一致」；沒核准或核准後被改過標「不會發出」；頂端顯示空跑／正式，每篇顯示空跑檢查、空跑比對或發布讀回結果。資料來自 `GET /api/scheduled?view=status`（兩支 workflow 的 PUBLISH_MODE、`data/publish-dry-log.json`、各篇雜湊；讀不到只降級顯示，不擋取消）。POST 上限 10 格（對齊 `publish_controls.py` MAX_CELLS）
+  - ⛔ `lib/content-hash.js` 必須和 `scripts/publish_controls.py`、HQ `scripts/threads_queue.py` 的 content_hash 逐位元相同（三邊同一組 HASH_VECTOR；JS 自測沒過就整批顯示「雜湊未核對」）。只給畫面用，發不發仍由 Python 判斷
+  - 改 `app.js` 記得把 `index.html` 的 `app.js?v=` 加 1，否則瀏覽器（尤其手機）會繼續用舊檔
 - `GET /api/version`：回報正在服務的部署（commit／deployment／node／region；**免登入**）
 - 共 11 支＝11 個函數；免費方案不用框架時上限 12（Vercel 官方 runtimes 頁，2026-10-03 查）
 
@@ -240,6 +243,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-29 | 【DEV/SOC】**排程面板改善（HQ tasks「看板排程面板改善」，批次:B69）**：`b2f7f20` 全文展開、核准＋雜湊一致、空跑／正式與每篇結果（`?view=status`）、沒核准標不會發出、上限 10 格、回覆權限看 reply_config（測試 27→30）。詳 archive | 總部視窗 | ⏳ 待驗證檔 |
 | 2026-10-28 | 【DEV/SOC】**Threads 日更改由排程發出（HQ RCF-278）**：`7a65750` 補對外控制 a～g、dry／live、四種 TASK、兩支 workflow、LINE 通知、測試 28 項；`376d311` 空跑只看當天。probe run 40624705211 回覆權限有；空跑比對 run 40624873788 10-28 逐格一致。空跑中，待 Tim 建 QStash 與貼 LINE secrets | HQ 本場 | 🧪 |
 | 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ✅ Tim 點按鈕確認 |
 | 2026-10-28 | 【DEV/SEC】**讀公開檔不再帶 token、不會掛住（HQ 資安稽核 10-17 ⑩ 換 token 時撞出）**：classic token 刪除後 `/api/threads-data`、`followers`、`weekly-report` 掛到逾時（帶失效 token 讀公開原檔 404、`JSON.parse` 在 callback 丟例外）；新 `lib/public-raw.js`。本機帶失效 PAT 三支 200、舊版 20 秒無回應。詳 archive | 總部視窗 | ✅ |
