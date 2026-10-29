@@ -243,6 +243,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-10-29 | 【DEV/SEC】**Dependabot 8 個警示（HQ 看板 Dependabot 場，Tim「執行」）**：`4d96102` 移除未用 SDK 兩個、lockfile 升 body-parser 2.4.0／proxy-addr 2.0.8／qs 6.17.1；8 筆全在本機 server.js 路徑，Vercel 不部署 package*.json 故免重部署；01:48Z 全數 fixed。詳 archive | 總部視窗 | ✅ |
 | 2026-10-29 | 【DEV/SOC】**排程面板改善（HQ tasks「看板排程面板改善」，批次:B69）**：`b2f7f20` 全文展開、核准＋雜湊一致、空跑／正式與每篇結果（`?view=status`）、沒核准標不會發出、上限 10 格、回覆權限看 reply_config（測試 27→30）。詳 archive | 總部視窗 | ⏳ 待驗證檔 |
 | 2026-10-28 | 【DEV/SOC】**Threads 日更改由排程發出（HQ RCF-278）**：`7a65750` 補對外控制 a～g、dry／live、四種 TASK、兩支 workflow、LINE 通知、測試 28 項；`376d311` 空跑只看當天。probe run 40624705211 回覆權限有；空跑比對 run 40624873788 10-28 逐格一致。空跑中，待 Tim 建 QStash 與貼 LINE secrets | HQ 本場 | 🧪 |
 | 2026-10-28 | 【DEV/SEC】**手動同步按鈕改說明、刪 GITHUB_PAT（HQ 甲場，Tim 選 (b)）**：按鈕走未設定分支顯示 ℹ️「每日自動」；env 6→5；排程發文保留待 HQ「Threads 日更改由看板排程發出」。詳 archive | 總部視窗 | ✅ Tim 點按鈕確認 |
