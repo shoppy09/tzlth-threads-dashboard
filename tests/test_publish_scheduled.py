@@ -46,6 +46,9 @@ class World:
         self.dispatches = []
         self.pushes = []
         self.tim_cancels_during_wait = False
+        # 真實回應形狀（10-28 probe log）：有回覆權限時 data[0] 帶 reply_config
+        self.publishing_limit = {'data': [{'quota_usage': 0, 'reply_quota_usage': 0,
+                                           'reply_config': {'quota_total': 1000, 'quota_duration': 86400}}]}
 
     def gh_api(self, method, path, body=None):
         if '/contents/' in path:
@@ -84,7 +87,7 @@ class World:
         if path.startswith('/me?'):
             return {'id': 'U', 'username': 'tim'}
         if path.startswith('/me/threads_publishing_limit'):
-            return {'data': [{'quota_usage': 0}]}
+            return self.publishing_limit
         if path.startswith('/me/threads?'):
             return {'data': self.own_posts}
         if path.startswith('/me/replies'):
@@ -158,6 +161,14 @@ ck('空跑不呼叫發布', not w.published, w.published)
 ck('空跑逐格建立不發布的容器', len(w.containers) == 3 and all(r is None for _, r in w.containers))
 ck('空跑寫入空跑紀錄', w.files[ps.DRY_LOG_PATH] and w.files[ps.DRY_LOG_PATH][-1]['task'] == 'publish')
 ck('空跑一切正常不推 LINE', not ps.NOTES, ps.NOTES)
+ck('空跑記錄回覆權限有', w.files[ps.DRY_LOG_PATH][-1].get('reply_permission') is True, w.files[ps.DRY_LOG_PATH][-1])
+
+# 1b 回應有 data 但沒有 reply_config（沒有回覆權限）→ 判沒有、推通知（2026-10-29：原本只看 data 會判成有）
+w = World([entry()], T1057)
+w.publishing_limit = {'data': [{'quota_usage': 0}]}
+run(w, 'dry', 'publish')
+ck('缺 reply_config：判沒有回覆權限', w.files[ps.DRY_LOG_PATH][-1].get('reply_permission') is False, w.files[ps.DRY_LOG_PATH][-1])
+ck('缺 reply_config：推通知', any('回覆的權限' in n for n in ps.NOTES), ps.NOTES)
 
 # 2 空跑：內容被改 → 不建容器、推通知
 bad = entry()

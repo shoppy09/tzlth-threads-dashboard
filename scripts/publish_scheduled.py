@@ -344,10 +344,13 @@ def token_ok():
 
 
 def reply_permission_ok():
-    """threads_publishing_limit 需要 threads_manage_replies：查得到＝能發串文第 2 格以後。只讀、不發文。"""
+    """threads_publishing_limit 需要 threads_manage_replies：查得到＝能發串文第 2 格以後。只讀、不發文。
+    2026-10-29（HQ tasks「看板排程面板改善」F）：原本只看回應有沒有 `data`，沒有回覆權限時 API 可能照樣回 data、
+    只是不給 reply_config ⇒ 改成 reply_config 真的有回來才算有。10-28 兩次 probe 實際回應有 reply_config（quota_total 1000）。"""
     try:
         r = threads_get('/me/threads_publishing_limit?fields=quota_usage,config,reply_quota_usage,reply_config')
-        return 'data' in r, r
+        ok = any(isinstance(d, dict) and d.get('reply_config') for d in (r.get('data') or []))
+        return ok, r
     except urllib.error.HTTPError as e:
         return False, f'HTTP {e.code} {e.read()[:200]!r}'
     except Exception as e:  # noqa: BLE001

@@ -3458,6 +3458,12 @@ window.tsScheduleOpen = function() {
     if (ta) { p.text = ta.value; p.charCount = ta.value.length; }
   });
 
+  // 格數：發文控制最多 10 格（scripts/publish_controls.py MAX_CELLS），API 也擋 10（2026-10-29）
+  if (tsPostsData.length > 10) {
+    showToast(`串文共 ${tsPostsData.length} 篇，排程最多 10 篇，請先合併或刪減`);
+    return;
+  }
+
   // 字數驗證
   const overLimit = tsPostsData.filter(p => (p.text || '').length > 500);
   if (overLimit.length > 0) {
@@ -3475,6 +3481,7 @@ window.tsScheduleOpen = function() {
     const firstText = (tsPostsData[0]?.text || '').substring(0, 50);
     const totalChars = tsPostsData.reduce((s, p) => s + (p.text || '').length, 0);
     summary.innerHTML = `共 <strong style="color:var(--text-bright)">${tsPostsData.length} 篇</strong> 串文，總計 ${totalChars} 字，將依序排程發布<br>
+      <span style="font-size:11px;margin-top:4px;display:block;color:#f59e0b">⚠️ 這裡加的排程要經總部核准（HQ threads_queue.py approve）才會發，沒核准到時間不會發出</span>
       <span style="font-size:11px;margin-top:4px;display:block">第 1 篇：「${escapeHtml(firstText)}${tsPostsData[0]?.text?.length > 50 ? '...' : ''}」</span>`;
   }
 
@@ -3523,8 +3530,9 @@ window.tsScheduleSubmit = async function(btn) {
     const data = await resp.json();
     if (!resp.ok) throw new Error(data.error || '排程失敗');
 
-    statusEl.textContent = `✅ 已加入排程（${posts.length} 篇）`;
-    showToast(`✅ 已排程 ${posts.length} 篇串文`);
+    // 2026-10-29：網頁加的排程沒有核准紀錄，發文程式不會發（HQ RCF-278 D4）→ 提示講清楚
+    statusEl.textContent = `☑️ 已加入（${posts.length} 篇），但要經總部核准才會發`;
+    showToast(`☑️ 已加入 ${posts.length} 篇，但要經總部核准才會發`);
     // 關閉面板 + refresh queue
     setTimeout(() => {
       const sec = document.getElementById('tsScheduleSection');
@@ -3566,12 +3574,40 @@ async function schedLoadQueue() {
   container.innerHTML = '<p style="color:var(--text-muted);font-size:13px">載入中...</p>';
 
   try {
-    const resp = await fetch('/api/scheduled');
+    // 2026-10-29（HQ tasks「看板排程面板改善」）：佇列與狀態並行讀；狀態讀不到只少顯示核准／空跑資訊，佇列照常顯示（取消鈕要能用）
+    const [resp, status] = await Promise.all([
+      fetch('/api/scheduled'),
+      fetch('/api/scheduled?view=status')
+        .then(r => r.json().then(b => (r.ok ? b : { fetchError: b.error || `HTTP ${r.status}` })))
+        .catch(e => ({ fetchError: e.message }))
+    ]);
     const posts = await resp.json();
     if (!resp.ok) throw new Error(posts.error || '載入失敗');
 
+    const esc = s => escapeHtml(s == null ? '' : String(s));
+    const st = status || {};
+    const mode = st.mode || {};
+    const hashOf = st.hash || {};
+    const dryLog = Array.isArray(st.dry_log) ? st.dry_log : [];
+    const isDry = mode.scheduled === 'dry' && mode.followup === 'dry';
+
+    // C：頂端模式
+    let modeHtml;
+    if (st.fetchError) {
+      modeHtml = `⚠️ 讀不到發文模式與空跑記錄（${esc(st.fetchError)}），下方只顯示排程本身`;
+    } else if (isDry) {
+      modeHtml = '🧪 <strong>空跑中</strong>：到時間不會真的發文，只記錄檢查與比對結果（兩支 workflow 的 PUBLISH_MODE＝dry）';
+    } else if (mode.scheduled === 'live' && mode.followup === 'live') {
+      modeHtml = '🟢 <strong>正式</strong>：已核准、內容沒改過的排程會在排程時間發出';
+    } else {
+      modeHtml = `⚠️ 模式不明：發文 ${esc(mode.scheduled || '讀不到')}／追蹤 ${esc(mode.followup || '讀不到')}`;
+    }
+    const errHtml = (st.errors || []).length
+      ? `<div style="font-size:11px;color:#f59e0b;margin-top:4px">${st.errors.map(esc).join('<br>')}</div>` : '';
+    const header = `<div style="font-size:12px;color:var(--text-dim);background:#151525;border:1px solid #2a2a40;border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.6">${modeHtml}${errHtml}</div>`;
+
     if (!Array.isArray(posts) || posts.length === 0) {
-      container.innerHTML = '<p style="color:var(--text-muted);font-size:13px">目前沒有排程貼文</p>';
+      container.innerHTML = header + '<p style="color:var(--text-muted);font-size:13px">目前沒有排程貼文</p>';
       return;
     }
 
@@ -3601,15 +3637,80 @@ async function schedLoadQueue() {
       return `<span style="font-size:10px;padding:2px 8px;border-radius:10px;background:${bg};color:${color};font-weight:600;white-space:nowrap">${label}</span>`;
     };
 
-    const escHtml = s => String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+    const line = (html, color) => `<p style="font-size:11px;color:${color || 'var(--text-muted)'};margin:4px 0 0;line-height:1.5">${html}</p>`;
+    const safeLink = u => /^https:\/\/(www\.)?threads\.(com|net)\//.test(u || '')
+      ? ` <a href="${esc(u)}" target="_blank" rel="noopener" style="color:#6ab4ff">看貼文</a>` : '';
+    const active = s => s === 'pending' || s === 'in_progress';
+
+    // B／D：核准與「不會發出」（只判兩種直接看資料就知道的：沒核准、核准後被改過；其他原因看空跑記錄）
+    const approvalHtml = p => {
+      if (!p.approved_hash) {
+        return active(p.status) ? line('⛔ <strong>不會發出</strong>：沒有總部核准紀錄（網頁加的排程要經總部核准才會發）', '#ff6b6b') : '';
+      }
+      const when = p.approved_at ? `已核准 ${formatTime(p.approved_at)}` : '已核准';
+      if (!st.hash_checked) return line(`🔏 ${when}（雜湊未核對）`, '#f59e0b');
+      if (hashOf[p.id] === true) return line(`🔏 ${when}，雜湊一致`, '#6abf69');
+      if (hashOf[p.id] === false) return line(`⛔ <strong>不會發出</strong>：${when}，但內容在核准後被改過，要重新核准`, '#ff6b6b');
+      return line(`🔏 ${when}（雜湊未核對）`, '#f59e0b');
+    };
+
+    // C：每篇的空跑結果（最新一筆 publish／compare）或正式發布結果
+    const resultHtml = p => {
+      let out = '';
+      const recs = dryLog.filter(r => r.entry === p.id).sort((a, b) => String(b.at).localeCompare(String(a.at)));
+      const pub = recs.find(r => r.task === 'publish');
+      const cmp = recs.find(r => r.task === 'compare');
+      if (pub) {
+        const perm = pub.reply_permission === true ? '回覆權限有' : '⚠️ 回覆權限沒有／讀不到（正式發只會發出第 1 格）';
+        const errs = pub.container_errors || [];
+        const api = errs.length ? `⚠️ API 不收：${errs.map(esc).join('；')}` : 'API 每格都收';
+        out += line(`🧪 空跑發文檢查 ${esc(pub.date)}（${formatTime(pub.at)}）：${esc(pub.cells)} 格｜${perm}｜${api}`,
+          errs.length || pub.reply_permission !== true ? '#f59e0b' : 'var(--text-muted)');
+      }
+      if (cmp) {
+        if (cmp.result === 'same') out += line(`🧪 空跑比對 ${esc(cmp.date)}：和你手發的版本逐格一致 ✅${safeLink(cmp.permalink)}`, '#6abf69');
+        else if (cmp.result === 'diff') out += line(`🧪 空跑比對 ${esc(cmp.date)}：和你手發的版本有 ${(cmp.diffs || []).length} 處不同：${(cmp.diffs || []).map(esc).join('；')}${safeLink(cmp.permalink)}`, '#f59e0b');
+        else out += line(`🧪 空跑比對 ${esc(cmp.date)}：找不到你當天手發、首行相同的那篇`, '#f59e0b');
+      }
+      if (p.readback) {
+        out += p.readback.ok
+          ? line(`✅ 發出後逐格讀回一致${safeLink(p.permalink || p.readback.permalink)}`, '#6abf69')
+          : line(`⚠️ 發出後讀回第 ${esc((p.readback.mismatch || []).join('、'))} 格和核准版不同${safeLink(p.permalink || p.readback.permalink)}`, '#f59e0b');
+      } else if (p.permalink) {
+        out += line(`貼文${safeLink(p.permalink)}`);
+      }
+      // 空跑時佇列不會被寫，過了時間仍是 pending：標明，免得誤以為卡住
+      if (isDry && p.status === 'pending' && p.scheduled_at && new Date(p.scheduled_at).getTime() < Date.now()) {
+        out += line('🧪 空跑：已過排程時間（空跑不改狀態，所以仍顯示待發布）', '#c084fc');
+      }
+      return out;
+    };
+
+    // A：每格全文（原生 details，手機可點開）
+    const cellsHtml = p => {
+      const isThread = p.type === 'thread' && Array.isArray(p.posts);
+      const cells = isThread
+        ? [...p.posts].sort((a, b) => (a.seq || 0) - (b.seq || 0)).map(c => c.content || '')
+        : [p.content || ''];
+      const body = cells.map((c, i) => `
+        <div style="margin-top:8px">
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:2px">第 ${i + 1} 格</div>
+          <div style="font-size:13px;color:var(--text-dim);white-space:pre-wrap;word-break:break-word;background:#11111c;border-radius:6px;padding:8px">${esc(c)}</div>
+        </div>`).join('');
+      return `
+        <p style="font-size:13px;color:var(--text-dim);margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-wrap">${esc(cells[0])}</p>
+        <details style="margin-top:6px">
+          <summary style="font-size:11px;color:#6ab4ff;cursor:pointer">展開全文（${cells.length} 格）</summary>
+          ${body}
+        </details>`;
+    };
 
     const renderPost = p => {
-      // 取得內容預覽：thread 取第 1 篇，single 取 content
       const isThread = p.type === 'thread' && Array.isArray(p.posts);
-      const previewText = isThread ? (p.posts[0]?.content || '') : (p.content || '');
       const threadBadge = isThread
         ? `<span style="font-size:10px;padding:2px 6px;border-radius:8px;background:#2a1a3a;color:#c084fc;font-weight:600">📜 ${p.posts.length}篇串文</span>`
         : '';
+      const idOk = /^[\w-]+$/.test(p.id || '');
       return `
         <div style="padding:12px 4px;border-bottom:1px solid #1a1a2e;display:flex;gap:12px;align-items:flex-start">
           <div style="flex:1;min-width:0">
@@ -3619,22 +3720,25 @@ async function schedLoadQueue() {
               <span style="font-size:11px;color:var(--text-muted)">排程：${formatTime(p.scheduled_at)}</span>
               ${p.published_at ? `<span style="font-size:11px;color:var(--text-muted)">發布：${formatTime(p.published_at)}</span>` : ''}
             </div>
-            <p style="font-size:13px;color:var(--text-dim);margin:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;white-space:pre-wrap">${escHtml(previewText)}</p>
-            ${p.reply ? `<p style="font-size:11px;color:var(--text-muted);margin:4px 0 0">💬 留言：${escHtml(p.reply.substring(0,60))}${p.reply.length>60?'...':''}</p>` : ''}
-            ${p.error ? `<p style="font-size:11px;color:#ff6b6b;margin:4px 0 0">錯誤：${escHtml(p.error)}</p>` : ''}
+            ${p.title ? `<div style="font-size:13px;color:var(--text-bright);font-weight:600;margin-bottom:4px">${esc(p.title)}</div>` : ''}
+            ${cellsHtml(p)}
+            ${approvalHtml(p)}
+            ${resultHtml(p)}
+            ${p.reply ? line(`💬 留言：${esc(p.reply.substring(0,60))}${p.reply.length>60?'...':''}`) : ''}
+            ${p.error ? line(`錯誤：${esc(p.error)}`, '#ff6b6b') : ''}
           </div>
-          ${p.status === 'pending' ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0" onclick="schedCancel('${p.id}', this)">取消</button>` : ''}
+          ${p.status === 'pending' && idOk ? `<button class="btn-secondary" style="font-size:11px;padding:4px 10px;white-space:nowrap;flex-shrink:0" onclick="schedCancel('${p.id}', this)">取消</button>` : ''}
         </div>
       `;
     };
 
-    let html = '';
+    let html = header;
     if (inProgress.length) {
       html += `<div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:600;letter-spacing:.5px">執行中 (${inProgress.length})</div>`;
       html += inProgress.map(renderPost).join('');
     }
     if (pending.length) {
-      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:${inProgress.length?'16px':'0'};margin-bottom:8px;font-weight:600;letter-spacing:.5px">待發布 (${pending.length})</div>`;
+      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:${inProgress.length?'16px':'0'};margin-bottom:8px;font-weight:600;letter-spacing:.5px">待發布 (${pending.length})${isDry ? '　<span style="color:#c084fc">空跑中：到時間只檢查、不發</span>' : ''}</div>`;
       html += pending.map(renderPost).join('');
     }
     if (history.length) {
@@ -3644,6 +3748,6 @@ async function schedLoadQueue() {
 
     container.innerHTML = html;
   } catch (e) {
-    container.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${e.message}</p>`;
+    container.innerHTML = `<p style="color:var(--accent);font-size:13px">載入失敗：${escapeHtml(String(e.message || e))}</p>`;
   }
 }

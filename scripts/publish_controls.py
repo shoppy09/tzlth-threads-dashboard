@@ -6,7 +6,7 @@ publish_controls.py — Threads 排程發文的對外控制（HQ RCF-278，2026-
 被 publish_scheduled.py 匯入。只放「純函式＋Threads 讀取」，不寫佇列。
 
 a 核准雜湊：content_hash() 必須和 HQ scripts/threads_queue.py 的同名函式逐位元相同
-  （兩邊 selftest 都驗同一組測試向量 HASH_VECTOR；改一邊就要改另一邊）。
+  與看板 lib/content-hash.js（排程面板顯示「雜湊一致」用，2026-10-29）三邊驗同一組測試向量 HASH_VECTOR；改一邊就要改另兩邊。
   正規化＝CRLF/CR→LF、NFC、每行去尾端空白、整格去頭尾空白。
 b 字數：Threads 每則上限 500 字元，emoji 按 UTF-8 位元組計（Meta 官方 posts 頁）⇒ weighted_len()。
   emoji 判斷是近似（常見 emoji 區段＋變體選擇字＋零寬連接字），寧可算多。
@@ -33,7 +33,7 @@ LEAD_MINUTES = 5         # 10:57 觸發時，5 分鐘內到期的先拿出來等
 LATE_MAX_MINUTES = 120   # 晚超過 2 小時不發（只有 12:30 那次會補發，Tim 2026-10-28 D5）
 DEDUPE_HOURS = 48
 
-# 兩邊（看板／HQ）共用的測試向量：改正規化或雜湊時兩邊 selftest 會一起紅
+# 三邊（看板 Python／看板 lib/content-hash.js／HQ）共用的測試向量：改正規化或雜湊時三邊自測會一起紅
 HASH_VECTOR = (['標題行\r\n\r\n第一段  \n', '  第二格　結尾。 '],
                '8bff0c2746ccaa00f30985a4258a63bde92f023bedd09fca7ab136b967ee2947')
 

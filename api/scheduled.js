@@ -2,6 +2,10 @@
  * api/scheduled.js — 排程發文統一 endpoint（GET / POST / DELETE）
  *
  * GET    /api/scheduled           → 讀取排程佇列（in_progress 置頂 → pending → 終態）
+ * GET    /api/scheduled?view=status → 排程面板狀態（2026-10-29 HQ tasks「看板排程面板改善」C）：
+ *   { mode:{scheduled,followup}, dry_log:[…], hash:{id:true/false}, hash_checked, errors:[…] }
+ *   mode 從兩支 workflow 的 PUBLISH_MODE 讀；讀不到就是 null，畫面顯示「讀不到」，不猜。
+ *   放在本檔而不另開 api/ 檔：免費方案函式數有上限（lib/request-guard.js 註解）；登入保護同本檔（middleware.js）。
  * POST   /api/scheduled           → 新增排程
  *   - 串文格式：{ type:'thread', posts:[{seq, content}], scheduled_at }
  *   - 單篇格式（向後相容）：{ content, reply_text, scheduled_at }
@@ -14,11 +18,15 @@
 const https = require('https');
 const crypto = require('crypto');
 const { guard } = require('../lib/request-guard');
+const { contentHash, entryCells, selftest } = require('../lib/content-hash');
 
 const GITHUB_TOKEN = process.env.GITHUB_SCHEDULE_TOKEN;
 const REPO = 'shoppy09/tzlth-threads-dashboard';
 const FILE_PATH = 'data/scheduled-posts.json';
-const MAX_THREAD_POSTS = 20;
+const DRY_LOG_PATH = 'data/publish-dry-log.json';
+const WORKFLOWS = { scheduled: '.github/workflows/publish-scheduled.yml', followup: '.github/workflows/publish-followup.yml' };
+// 2026-10-29：20 → 10，對齊發文控制 scripts/publish_controls.py MAX_CELLS（超過 10 格本來就不會發）
+const MAX_THREAD_POSTS = 10;
 const MAX_POST_CHARS = 500;
 
 // ── GitHub Contents API helpers ───────────────────────────────────────────────
@@ -67,6 +75,51 @@ async function writeFile(posts, sha, message) {
   return result.status; // 200/201 = ok, 409 = SHA conflict
 }
 
+async function readText(filePath) {
+  const result = await githubRequest('GET', filePath);
+  if (result.status !== 200) throw new Error(`讀取 ${filePath} 失敗（GitHub ${result.status}）`);
+  return Buffer.from(result.body.content, 'base64').toString('utf-8');
+}
+
+// workflow 檔裡所有 PUBLISH_MODE: 值；全部相同才回該值，不同回 'mixed'，沒有回 null
+function parseMode(yml) {
+  const vals = [...yml.matchAll(/^\s*PUBLISH_MODE:\s*['"]?([A-Za-z]+)/gm)].map(m => m[1].toLowerCase());
+  if (!vals.length) return null;
+  return vals.every(v => v === vals[0]) ? vals[0] : 'mixed';
+}
+
+async function readStatus() {
+  const errors = [];
+  const [queue, dryLog, wfS, wfF] = await Promise.allSettled([
+    readFile(), readText(DRY_LOG_PATH), readText(WORKFLOWS.scheduled), readText(WORKFLOWS.followup)
+  ]);
+  const pick = (r, label) => {
+    if (r.status === 'fulfilled') return r.value;
+    errors.push(`${label}：${r.reason && r.reason.message}`);
+    return null;
+  };
+  const q = pick(queue, '排程佇列');
+  const logText = pick(dryLog, '空跑記錄');
+  let dry_log = null;
+  if (logText !== null) {
+    try { dry_log = JSON.parse(logText); } catch (e) { errors.push(`空跑記錄不是合法 JSON：${e.message}`); }
+  }
+  const s = pick(wfS, '發文 workflow');
+  const f = pick(wfF, '追蹤 workflow');
+  const mode = { scheduled: s === null ? null : parseMode(s), followup: f === null ? null : parseMode(f) };
+
+  // 雜湊：自測沒過就整批不判（hash_checked=false），畫面顯示「雜湊未核對」
+  const hash_checked = selftest();
+  const hash = {};
+  if (hash_checked && q) {
+    for (const e of q.posts) {
+      if (e.type === 'thread' && e.approved_hash) hash[e.id] = contentHash(entryCells(e)) === e.approved_hash;
+    }
+  }
+  if (!hash_checked) errors.push('雜湊自測沒過（lib/content-hash.js 與 publish_controls.py 不一致），本次不判雜湊');
+  return { mode, dry_log, hash, hash_checked, errors };
+}
+
 // ── Main handler ──────────────────────────────────────────────────────────────
 
 module.exports = async (req, res) => {
@@ -76,6 +129,14 @@ module.exports = async (req, res) => {
   if (!GITHUB_TOKEN) return res.status(500).json({ error: 'GITHUB_SCHEDULE_TOKEN 未設定' });
 
   // ── GET: list scheduled posts ───────────────────────────────────────────────
+  if (req.method === 'GET' && new URL(req.url || '/', 'http://local').searchParams.get('view') === 'status') {
+    try {
+      return res.json(await readStatus());
+    } catch (e) {
+      return res.status(500).json({ error: e.message });
+    }
+  }
+
   if (req.method === 'GET') {
     try {
       const { posts } = await readFile();
