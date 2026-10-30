@@ -492,8 +492,38 @@ function getWeekday(dateStr) {
   return days[new Date(y, m - 1, d).getDay()];
 }
 
+// ===== 發文空窗橫幅 =====
+// 原本只在頁面載入時用瀏覽器快取算一次，autoLoadApiData() 換成新資料後不重算 ⇒ 快取舊時誤報「已 N 天未發文」
+// （HQ tasks「看板發文空窗橫幅用舊快取計算」，2026-10-30）。改由 refreshDashboard() 每次重算；
+// 按 ✕ 關掉後，到下次重整頁面前不再跳出（var：refreshDashboard 在本宣告之前就會被呼叫）。
+var vacancyDismissed = false;
+function updateVacancyWarning() {
+  const vacancyEl = document.getElementById('vacancyWarning');
+  if (!vacancyEl) return;
+  const allSorted = [...posts].sort((a,b) => b.date.localeCompare(a.date));
+  if (vacancyDismissed || allSorted.length === 0) {
+    vacancyEl.style.display = 'none';
+    return;
+  }
+  const lastPostDate = new Date(allSorted[0].date);
+  const daysSince = Math.floor((new Date() - lastPostDate) / 86400000);
+  const closeBtn = `<button onclick="vacancyDismissed=true;this.parentElement.style.display='none'" style="float:right;background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>`;
+  if (daysSince >= 5) {
+    vacancyEl.style.display = 'block';
+    vacancyEl.className = 'warning-banner warning-red';
+    vacancyEl.innerHTML = `🚨 已 <strong>${daysSince} 天</strong>未發文！建議今天發一篇保持節奏。 ${closeBtn}`;
+  } else if (daysSince >= 3) {
+    vacancyEl.style.display = 'block';
+    vacancyEl.className = 'warning-banner';
+    vacancyEl.innerHTML = `📅 已 <strong>${daysSince} 天</strong>未發文，建議今天安排一篇。 ${closeBtn}`;
+  } else {
+    vacancyEl.style.display = 'none';
+  }
+}
+
 // ===== Dashboard =====
 function refreshDashboard() {
+  updateVacancyWarning();
   const filtered = getFilteredPosts();
   const n = filtered.length;
 
@@ -1717,27 +1747,7 @@ autoLoadApiData();
       }
     }
   }).catch(() => {});
-
-  // 發文空窗檢查
-  const allSorted = [...posts].sort((a,b) => b.date.localeCompare(a.date));
-  if (allSorted.length > 0) {
-    const lastPostDate = new Date(allSorted[0].date);
-    const daysSince = Math.floor((new Date() - lastPostDate) / 86400000);
-    const vacancyEl = document.getElementById('vacancyWarning');
-    if (vacancyEl) {
-      if (daysSince >= 5) {
-        vacancyEl.style.display = 'block';
-        vacancyEl.className = 'warning-banner warning-red';
-        vacancyEl.innerHTML = `🚨 已 <strong>${daysSince} 天</strong>未發文！建議今天發一篇保持節奏。 <button onclick="this.parentElement.style.display='none'" style="float:right;background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>`;
-      } else if (daysSince >= 3) {
-        vacancyEl.style.display = 'block';
-        vacancyEl.className = 'warning-banner';
-        vacancyEl.innerHTML = `📅 已 <strong>${daysSince} 天</strong>未發文，建議今天安排一篇。 <button onclick="this.parentElement.style.display='none'" style="float:right;background:none;border:none;color:#fff;cursor:pointer;font-size:16px">✕</button>`;
-      } else {
-        vacancyEl.style.display = 'none';
-      }
-    }
-  }
+  // 發文空窗檢查已移到 updateVacancyWarning()，由 refreshDashboard() 每次呼叫
 })();
 
 // ===== Heatmap =====
