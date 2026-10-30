@@ -42,5 +42,16 @@
     "at": "2026-10-30T10:57:09.183695+08:00",
     "reply_permission": true,
     "container_errors": []
+  },
+  {
+    "task": "compare",
+    "date": "2026-10-30",
+    "entry": "8cb8dbb3-67d6-4b5d-b238-bf1359c8f763",
+    "title": "被交辦一件超出能力的事，先拆開的不是工作",
+    "cells": 6,
+    "at": "2026-10-30T12:30:14.801317+08:00",
+    "result": "same",
+    "diffs": [],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfGkUfigB_H"
   }
 ]
