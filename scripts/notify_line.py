@@ -31,8 +31,10 @@ TEST_MSG = '🧪 Threads 排程通知測試（RCF-278）：收到這則代表推
 FAIL_MSG = '🔴 Threads 排程（{wf}）執行失敗，今天的串文可能沒發或沒比對。在對話說「查 Threads 排程」。'
 
 
-def line_quota_used(token, opener=urequest.urlopen):
-    req = urequest.Request('https://api.line.me/v2/bot/message/quota/consumption',
+def line_quota_used(token, opener=None):
+    # 呼叫時才取連網函式：寫成預設參數會在定義時綁死，測試守衛換不到（HQ 2026-10-30）
+    opener = opener or urequest.urlopen
+    req =urequest.Request('https://api.line.me/v2/bot/message/quota/consumption',
                            headers={'Authorization': f'Bearer {token}'})
     try:
         with opener(req, timeout=15) as r:
@@ -41,8 +43,9 @@ def line_quota_used(token, opener=urequest.urlopen):
         return None
 
 
-def line_push(token, to, text, opener=urequest.urlopen):
-    body = json.dumps({'to': to, 'messages': [{'type': 'text', 'text': text}]}, ensure_ascii=False).encode('utf-8')
+def line_push(token, to, text, opener=None):
+    opener = opener or urequest.urlopen
+    body =json.dumps({'to': to, 'messages': [{'type': 'text', 'text': text}]}, ensure_ascii=False).encode('utf-8')
     req = urequest.Request('https://api.line.me/v2/bot/message/push', data=body, method='POST',
                            headers={'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'})
     try:

@@ -20,6 +20,12 @@ os.environ.setdefault('THREADS_ACCESS_TOKEN', 'y')
 
 import publish_controls as pc  # noqa: E402
 import publish_scheduled as ps  # noqa: E402
+import notify_line as nl  # noqa: E402
+
+# install() 會把 pc.threads_get 換成假的，第 15 段要測真的那支 ⇒ 先留一份
+REAL_THREADS_GET = pc.threads_get
+REAL_LINE_QUOTA = nl.line_quota_used
+REAL_LINE_PUSH = nl.line_push
 
 FAILS = 0
 
@@ -104,7 +110,11 @@ class World:
         return [t for t, _ in self.containers]
 
 
+NET_ATTEMPTS = []
+
+
 def _no_network(*a, **k):
+    NET_ATTEMPTS.append(getattr(a[0], 'full_url', a[0]) if a else '?')
     raise RuntimeError('測試不得連網（有呼叫漏接到假的 Threads／GitHub）')
 
 
@@ -266,6 +276,29 @@ try:
     ck('空跑寫佇列會丟錯', False)
 except RuntimeError:
     ck('空跑寫佇列會丟錯', True)
+
+# 15 預設參數不可綁死連網函式（HQ tasks「看板禁止連網守衛擋不到 threads_get」，2026-10-30）：
+#    `opener=urllib.request.urlopen` 在定義時就綁死真函式，守衛換的是模組屬性，換不到它
+ck('前面所有情境都沒有嘗試連網', not NET_ATTEMPTS, NET_ATTEMPTS)
+import inspect  # noqa: E402
+REAL = (('publish_controls.threads_get', REAL_THREADS_GET, ('/me', 't')),
+        ('notify_line.line_quota_used', REAL_LINE_QUOTA, ('t',)),
+        ('notify_line.line_push', REAL_LINE_PUSH, ('t', 'u', 'x')))
+for name, fn, _ in REAL:
+    ck(f'{name} 的 opener 預設值是 None（呼叫時才取連網函式）',
+       inspect.signature(fn).parameters['opener'].default is None)
+pc.urllib.request.urlopen = _no_network
+for name, fn, args in REAL:
+    if inspect.signature(fn).parameters['opener'].default is not None:
+        ck(f'{name} 不帶 opener 會被守衛擋下', False, '預設值綁死，略過實呼叫以免真的連網')
+        continue
+    before = len(NET_ATTEMPTS)
+    try:
+        fn(*args)
+        blocked = False
+    except RuntimeError:
+        blocked = True
+    ck(f'{name} 不帶 opener 會被守衛擋下', blocked and len(NET_ATTEMPTS) == before + 1, NET_ATTEMPTS[before:])
 
 print('合計：' + ('全部通過' if not FAILS else f'{FAILS} 項失敗'))
 sys.exit(1 if FAILS else 0)

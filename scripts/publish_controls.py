@@ -119,8 +119,10 @@ def classify_due(entries, now):
 
 # ── Threads 讀取 ─────────────────────────────────────────────────────────────
 
-def threads_get(path, token, opener=urllib.request.urlopen):
+def threads_get(path, token, opener=None):
     """path 為相對路徑（補上網址與 token），或 API 回的 paging.next 完整網址（已含 token，原樣使用）。"""
+    # 呼叫時才取連網函式：寫成預設參數會在定義時綁死，測試守衛換不到（HQ 2026-10-30）
+    opener = opener or urllib.request.urlopen
     if path.startswith('http'):
         url = path
     else:
