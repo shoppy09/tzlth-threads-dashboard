@@ -86,5 +86,19 @@
     "at": "2026-11-01T10:57:08.719810+08:00",
     "reply_permission": true,
     "container_errors": []
+  },
+  {
+    "task": "compare",
+    "date": "2026-11-01",
+    "entry": "2c4478c2-87ac-45a8-97c4-57137a09abe8",
+    "title": "每次都願意通融的人，最後常被說雙標",
+    "cells": 6,
+    "at": "2026-11-01T12:30:18.542225+08:00",
+    "result": "diff",
+    "diffs": [
+      "格數不同：排程 6 格、線上 5 格",
+      "第 5 格不同（第 394 字起）：排程「忙，別人看得懂。」／線上「忙，別人看得懂。隔週一早上，伊蓮把便利貼」"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfLt1w7CG82"
   }
 ]
