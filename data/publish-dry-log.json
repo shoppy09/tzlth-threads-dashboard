@@ -155,5 +155,16 @@
     "at": "2026-11-04T10:57:10.900329+08:00",
     "reply_permission": true,
     "container_errors": []
+  },
+  {
+    "task": "compare",
+    "date": "2026-11-04",
+    "entry": "41a4ecd5-7bcb-4e32-b0eb-98cc4b6c3a0d",
+    "title": "案子收掉那一週最難熬的，常常不是沒事做",
+    "cells": 6,
+    "at": "2026-11-04T12:30:11.769199+08:00",
+    "result": "same",
+    "diffs": [],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfTcOSCDXV3"
   }
 ]
