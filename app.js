@@ -3753,7 +3753,7 @@ async function schedLoadQueue() {
       html += inProgress.map(renderPost).join('');
     }
     if (pending.length) {
-      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:${inProgress.length?'16px':'0'};margin-bottom:8px;font-weight:600;letter-spacing:.5px">待發布 (${pending.length})${isDry ? '　<span style="color:#c084fc">空跑中：到時間只檢查、不發</span>' : ''}</div>`;
+      html += `<div style="font-size:11px;color:var(--text-muted);margin-top:${inProgress.length?'16px':'0'};margin-bottom:8px;font-weight:600;letter-spacing:.5px">待發布 (${pending.length})${isDry ? ('　<span style="color:#c084fc">' + (mode.cross === 'live' ? '11:00 空跑只檢查、不發；19:00 跨發會真的發' : '空跑中：到時間只檢查、不發') + '</span>') : ''}</div>`;
       html += pending.map(renderPost).join('');
     }
     if (history.length) {
