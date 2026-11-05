@@ -9,9 +9,12 @@ publish_scheduled.py — Threads 排程發文（看板 A-28）
       compare  12:30 由 QStash 觸發（publish-followup.yml）：dry＝讀 Tim 手發的那串逐格比對；
                live＝當天還沒發的觸發 publish 補發一次（晚 2 小時內），⛔ 補發也只在 publish-scheduled.yml 裡發，
                所以「停用 publish-scheduled.yml」（schedule_control.py pause A-28）＝全部停住
-      watch    GitHub 自己的排程（publish-followup.yml；實際約 13 點多才跑）：只看不發——當天該跑的沒跑、
-               11:00 的文還沒發、週日彙總、token 到期提醒
+      watch    GitHub 自己的排程（publish-followup.yml；cron 04:30 UTC，2026-10-28～11-05 實際在台灣 18:30～20:44 才跑）：
+               只看不發——當天該跑的沒跑、到期的文還沒發、週日彙總、token 到期提醒
       probe    手動：驗 token、回覆權限（threads_publishing_limit 需 threads_manage_replies）、建一個不發布的容器
+      preflight 手動：未來 8 天的 19:00 跨發逐格建不發布的容器（上線前與每批核准後驗 API 收不收；不發文、不寫佇列）
+  - 2026-11-05（HQ RCF-295）19:00 FB 跨發併入同一條路：佇列 source＝hq-fb-cross，模式看 CROSS_PUBLISH_MODE（Tim 裁直接上線，
+    不空跑，改預跑＋A-09 每日核對）；11:00 原創仍看 PUBLISH_MODE。QStash 另加 18:57 發文、20:30 補發
   - 控制：a 核准雜湊／b 每次 1 則 ≤10 格、晚 2 小時不發／c 租約＋發前看近 48 小時首行／d 存每格編號讀回／
           e 停用 workflow／f notify_line.py／g tests/test_publish_scheduled.py（見 publish_controls.py 檔頭）
 
@@ -39,6 +42,8 @@ import notify_line  # noqa: E402
 GITHUB_TOKEN = os.environ.get('GITHUB_TOKEN')
 THREADS_TOKEN = os.environ.get('THREADS_ACCESS_TOKEN')
 MODE = os.environ.get('PUBLISH_MODE', 'dry').strip() or 'dry'
+CROSS_MODE = os.environ.get('CROSS_PUBLISH_MODE', 'dry').strip() or 'dry'   # 19:00 FB 跨發（source＝hq-fb-cross，RCF-295）
+CROSS_SOURCE = 'hq-fb-cross'
 TASK = os.environ.get('TASK', 'publish').strip() or 'publish'
 TOKEN_EXPIRES_ON = os.environ.get('THREADS_TOKEN_EXPIRES_ON', '')   # YYYY-MM-DD，換 token 時一起改 workflow
 REPO = os.environ.get('GITHUB_REPOSITORY') or 'shoppy09/tzlth-threads-dashboard'
@@ -128,12 +133,20 @@ def write_json_file(path, data, sha, message):
     return status
 
 
+def entry_mode(entry):
+    return CROSS_MODE if entry.get('source') == CROSS_SOURCE else MODE
+
+
+def any_live():
+    return MODE == 'live' or CROSS_MODE == 'live'
+
+
 def read_scheduled_file():
     return read_json_file(FILE_PATH)
 
 
 def write_scheduled_file(posts, sha, message):
-    if MODE != 'live':
+    if not any_live():
         raise RuntimeError('空跑模式不得寫佇列（SOP 第六節）')
     return write_json_file(FILE_PATH, posts, sha, message)
 
@@ -369,24 +382,33 @@ def preflight():
 def run_publish():
     now = now_tw()
     posts, sha = read_scheduled_file()
-    if MODE == 'live' and reset_zombie_leases(posts):
+    if any_live() and reset_zombie_leases(posts):
         if write_scheduled_file(posts, sha, 'chore: mark zombie leases failed') not in (200, 201):
             WRITE_FAILURES.append('zombie')
         posts, sha = read_scheduled_file()
-    if MODE != 'live':
-        # 空跑不寫佇列 ⇒ 昨天的 pending 永遠是 pending；只看今天的，否則之後每天都會報「晚了不發」（2026-10-28 實作時撈出）
-        posts = [e for e in posts if (e.get('scheduled_at') or '')[:10] == now.date().isoformat()]
+    def keep(e):
+        # 空跑不寫佇列 ⇒ 過了時間的 pending 永遠是 pending：昨天的不看（否則之後每天都報「晚了不發」，2026-10-28 實作時撈出）；
+        # 今天已過時段的也不看（否則 18:57 那次會把 11:00 那筆報成晚了，每天一則假警報，RCF-295）
+        if entry_mode(e) == 'live':
+            return True
+        if (e.get('scheduled_at') or '')[:10] != now.date().isoformat():
+            return False
+        try:
+            return now - pc.parse_ts(e['scheduled_at']) <= timedelta(minutes=pc.LATE_MAX_MINUTES)
+        except Exception:  # noqa: BLE001
+            return True
+    posts = [e for e in posts if keep(e)]
     ready, late, deferred = pc.classify_due(posts, now)
     for e, why in late:
         msg = f'Threads 排程 {label(e)} 已晚超過 {pc.LATE_MAX_MINUTES // 60} 小時，不發（{why}）'
         note(msg)
-        if MODE == 'live':
+        if entry_mode(e) == 'live':
             update_entry(e['id'], 'failed', error=msg)
     for e in deferred:
-        note(f'Threads 排程 {label(e)} 超過單次上限 {pc.MAX_PER_RUN} 則，延到下一次（12:30 那次會補）')
+        note(f'Threads 排程 {label(e)} 超過單次上限 {pc.MAX_PER_RUN} 則，延到下一次（補發那次會補）')
     if not ready:
         summary('- 沒有到期的排程')
-        if MODE == 'live':
+        if any_live():
             cleanup_old_records()
         return
     if not preflight():
@@ -397,10 +419,10 @@ def run_publish():
         summary(f'### {label(entry)}｜{len(cells)} 格｜檢查：{"通過" if ok else why}')
         if not ok:
             note(f'Threads 排程 {label(entry)} 不發：{why}')
-            if MODE == 'live':
+            if entry_mode(entry) == 'live':
                 update_entry(entry['id'], 'failed', error=f'{code}: {why}')
             continue
-        if MODE != 'live':
+        if entry_mode(entry) != 'live':
             run_publish_dry(entry, cells, now)
             continue
         dup = pc.already_posted(cells[0], THREADS_TOKEN, now)
@@ -430,7 +452,8 @@ def run_publish():
         else:
             update_entry(entry['id'], 'failed', error=err)
             note(f'Threads {label(entry)} 第 1 格就發布失敗，沒有發出任何內容：{err[:80]}')
-    cleanup_old_records()
+    if any_live():
+        cleanup_old_records()
 
 
 def run_publish_dry(entry, cells, now):
@@ -473,15 +496,18 @@ def run_compare():
         return
     for e in todays:
         cells = cells_of(e)
-        if MODE == 'live':
+        slot = (e.get('scheduled_at') or '')[11:16]
+        if entry_mode(e) == 'live':
             if e.get('status') == 'pending':
                 ok, st, _ = dispatch(PUBLISH_WORKFLOW, {'task': 'publish'})
                 if ok:
-                    note(f'Threads {label(e)} 11:00 沒發出，12:30 補發一次（請之後看一下）')
+                    note(f'Threads {label(e)} {slot} 沒發出，現在補發一次（請之後看一下）')
                 else:
-                    note(f'Threads {label(e)} 11:00 沒發出，補發觸發失敗（HTTP {st}；暫停中也會這樣）')
+                    note(f'Threads {label(e)} {slot} 沒發出，補發觸發失敗（HTTP {st}；暫停中也會這樣）')
             summary(f'- {label(e)}：{e.get("status")}')
             continue
+        if now - pc.parse_ts(e['scheduled_at']) > timedelta(minutes=pc.LATE_MAX_MINUTES):
+            continue        # 空跑比對只看當次時段；20:30 那次不再比一次 11:00（RCF-295）
         root, got = pc.find_manual_thread(cells, THREADS_TOKEN, now)
         rec = {'task': 'compare', 'date': now.date().isoformat(), 'entry': e['id'], 'title': e.get('title', ''),
                'cells': len(cells), 'at': now_tw_iso()}
@@ -512,8 +538,8 @@ def run_watch():
             note('Threads 排程：今天有到期的串文，但 10:57 的發文觸發（QStash）沒有跑')
         if fol is not None and not fol:
             note('Threads 排程：12:30 的比對／補發觸發（QStash）今天沒有跑')
-        if MODE == 'live':
-            for e in due:
+        if any_live():
+            for e in [x for x in due if entry_mode(x) == 'live']:
                 if e.get('status') == 'pending' and now - pc.parse_ts(e['scheduled_at']) > timedelta(minutes=30):
                     note(f'Threads {label(e)} 到現在還沒發出')
     summary(f'- 巡看：今天到期 {len(due)} 則')
@@ -555,6 +581,37 @@ def token_reminder(now):
                      f'請換 token（4 個落點）並改 workflow 的 THREADS_TOKEN_EXPIRES_ON')
 
 
+def run_preflight():
+    """上線前與每批核准後：未來 8 天的跨發逐格建不發布的容器（不呼叫 threads_publish、不寫佇列）。"""
+    now = now_tw()
+    posts, _ = read_scheduled_file()
+    todo = [e for e in posts if e.get('source') == CROSS_SOURCE and e.get('status') == 'pending'
+            and timedelta(0) <= pc.parse_ts(e['scheduled_at']) - now <= timedelta(days=8)]
+    todo.sort(key=lambda e: pc.parse_ts(e['scheduled_at']))
+    if not preflight():
+        return
+    perm, detail = reply_permission_ok()
+    summary(f'- 回覆權限：{"有" if perm else "沒有"}')
+    if not perm:
+        note(f'Threads 預跑：token 沒有發回覆的權限，串文第 2 格以後會失敗。{str(detail)[:80]}')
+    bad = 0
+    for e in todo:
+        ok, _code, why = pc.check_entry(e)
+        cells = cells_of(e)
+        errs = [] if ok else [why]
+        if ok:
+            for i, c in enumerate(cells, 1):
+                try:
+                    create_container(pc.normalize_cell(c))
+                except Exception as ex:  # noqa: BLE001
+                    errs.append(f'第 {i} 格：{str(ex)[:80]}')
+        bad += bool(errs)
+        summary(f'- {label(e)}｜{len(cells)} 格｜{"API 每格都收（未發布）" if not errs else "；".join(errs)}')
+    summary(f'- 預跑合計 {len(todo)} 則，有問題 {bad} 則（未發布）')
+    if bad:
+        note(f'Threads 跨發預跑：{bad} 則有問題，明細看 Actions「Publish Scheduled Threads Posts」')
+
+
 def run_probe():
     ok = preflight()
     perm, detail = reply_permission_ok()
@@ -574,11 +631,12 @@ def main():
     if not GITHUB_TOKEN or not THREADS_TOKEN:
         print('ERROR: GITHUB_TOKEN 或 THREADS_ACCESS_TOKEN 未設定', flush=True)
         sys.exit(1)
-    if MODE not in ('dry', 'live'):
-        print(f'ERROR: PUBLISH_MODE 只能是 dry／live，收到 {MODE!r}', flush=True)
+    if MODE not in ('dry', 'live') or CROSS_MODE not in ('dry', 'live'):
+        print(f'ERROR: 模式只能是 dry／live，收到 PUBLISH_MODE={MODE!r}、CROSS_PUBLISH_MODE={CROSS_MODE!r}', flush=True)
         sys.exit(1)
-    summary(f'## Threads 排程｜{TASK}｜模式 {MODE}｜{now_tw().strftime("%Y-%m-%d %H:%M")} 台灣')
-    {'publish': run_publish, 'compare': run_compare, 'watch': run_watch, 'probe': run_probe}[TASK]()
+    summary(f'## Threads 排程｜{TASK}｜11:00 {MODE}｜19:00 跨發 {CROSS_MODE}｜{now_tw().strftime("%Y-%m-%d %H:%M")} 台灣')
+    {'publish': run_publish, 'compare': run_compare, 'watch': run_watch, 'probe': run_probe,
+     'preflight': run_preflight}[TASK]()
     finish()
 
 

@@ -88,6 +88,12 @@ function parseMode(yml) {
   return vals.every(v => v === vals[0]) ? vals[0] : 'mixed';
 }
 
+// 19:00 跨發的模式（HQ RCF-295）：沒設定回 null
+function parseCrossMode(yml) {
+  const m = yml.match(/^\s*CROSS_PUBLISH_MODE:\s*['"]?([A-Za-z]+)/m);
+  return m ? m[1].toLowerCase() : null;
+}
+
 async function readStatus() {
   const errors = [];
   const [queue, dryLog, wfS, wfF] = await Promise.allSettled([
@@ -106,7 +112,8 @@ async function readStatus() {
   }
   const s = pick(wfS, '發文 workflow');
   const f = pick(wfF, '追蹤 workflow');
-  const mode = { scheduled: s === null ? null : parseMode(s), followup: f === null ? null : parseMode(f) };
+  const mode = { scheduled: s === null ? null : parseMode(s), followup: f === null ? null : parseMode(f),
+    cross: s === null ? null : parseCrossMode(s) };
 
   // 雜湊：自測沒過就整批不判（hash_checked=false），畫面顯示「雜湊未核對」
   const hash_checked = selftest();

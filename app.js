@@ -3606,11 +3606,16 @@ async function schedLoadQueue() {
     if (st.fetchError) {
       modeHtml = `⚠️ 讀不到發文模式與空跑記錄（${esc(st.fetchError)}），下方只顯示排程本身`;
     } else if (isDry) {
-      modeHtml = '🧪 <strong>空跑中</strong>：到時間不會真的發文，只記錄檢查與比對結果（兩支 workflow 的 PUBLISH_MODE＝dry）';
+      modeHtml = '🧪 <strong>11:00 原創空跑中</strong>：到時間不會真的發文，只記錄檢查與比對結果（兩支 workflow 的 PUBLISH_MODE＝dry）';
     } else if (mode.scheduled === 'live' && mode.followup === 'live') {
       modeHtml = '🟢 <strong>正式</strong>：已核准、內容沒改過的排程會在排程時間發出';
     } else {
       modeHtml = `⚠️ 模式不明：發文 ${esc(mode.scheduled || '讀不到')}／追蹤 ${esc(mode.followup || '讀不到')}`;
+    }
+    if (!st.fetchError && mode.cross === 'live') {
+      modeHtml += '<br>🟢 <strong>19:00 FB 跨發：正式</strong>：已核准、內容沒改過的會在 19:00 發出（標題旁可展開全文、到點前可取消）';
+    } else if (!st.fetchError && mode.cross === 'dry') {
+      modeHtml += '<br>🧪 <strong>19:00 FB 跨發：空跑中</strong>';
     }
     const errHtml = (st.errors || []).length
       ? `<div style="font-size:11px;color:#f59e0b;margin-top:4px">${st.errors.map(esc).join('<br>')}</div>` : '';
@@ -3690,7 +3695,7 @@ async function schedLoadQueue() {
         out += line(`貼文${safeLink(p.permalink)}`);
       }
       // 空跑時佇列不會被寫，過了時間仍是 pending：標明，免得誤以為卡住
-      if (isDry && p.status === 'pending' && p.scheduled_at && new Date(p.scheduled_at).getTime() < Date.now()) {
+      if (isDry && p.source !== 'hq-fb-cross' && p.status === 'pending' && p.scheduled_at && new Date(p.scheduled_at).getTime() < Date.now()) {
         out += line('🧪 空跑：已過排程時間（空跑不改狀態，所以仍顯示待發布）', '#c084fc');
       }
       return out;

@@ -4,16 +4,18 @@ name: Publish Scheduled Threads Posts
 # - 觸發＝Upstash QStash 每天台灣 10:57 打 workflow_dispatch（GitHub 自己的排程實際晚 4 小時以上，
 #   10-20～10-27 八次都在台灣 13:16～13:50 才跑），所以本檔不再有 schedule（原 cron '0 1 * * *'）。
 # - ⛔ 所有真正發文只在本檔發生（12:30 的補發也是觸發本檔）⇒ 停用本檔（HQ schedule_control.py pause A-28）＝全部停住。
+# - 2026-11-05（HQ RCF-295）：QStash 另加台灣 18:57 觸發本檔發 19:00 FB 跨發；CROSS_PUBLISH_MODE 管跨發（Tim 裁直接上線），
+#   PUBLISH_MODE 管 11:00 原創。
 # - PUBLISH_MODE：dry＝空跑（不寫佇列、不發文）。空跑 ≥2 週、≥5 次，Tim 看過才改 live（HQ routine-automation-sop 第六節）。
 # - 換 Threads token 時一起改 THREADS_TOKEN_EXPIRES_ON（到期前 14 天起週日提醒、3 天內每天提醒）。
 on:
   workflow_dispatch:
     inputs:
       task:
-        description: 'publish＝發到期的串文；probe＝只驗 token／回覆權限／建不發布的容器'
+        description: 'publish＝發到期的串文；probe＝只驗 token／回覆權限／建不發布的容器；preflight＝未來 8 天跨發逐格建不發布的容器'
         default: 'publish'
         type: choice
-        options: [publish, probe]
+        options: [publish, probe, preflight]
       notify_test:
         description: '推一則 LINE 測試訊息'
         default: false
@@ -61,6 +63,7 @@ jobs:
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
           PUBLISH_MODE: dry
+          CROSS_PUBLISH_MODE: live
           TASK: ${{ inputs.task || 'publish' }}
           THREADS_TOKEN_EXPIRES_ON: '2026-12-15'
         run: python scripts/publish_scheduled.py

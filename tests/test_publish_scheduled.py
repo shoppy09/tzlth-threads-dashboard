@@ -147,20 +147,24 @@ def install(w):
 CELLS = ['標題行\n\n第一格內容', '第二格內容', '第三格內容']
 
 
-def entry(eid='e1', when='2026-10-29T11:00:00+08:00', cells=CELLS, approved=True, status='pending'):
-    return {'id': eid, 'type': 'thread', 'title': '標題行', 'status': status, 'scheduled_at': when,
-            'posts': [{'seq': i + 1, 'content': c} for i, c in enumerate(cells)],
-            'approved_hash': pc.content_hash(cells) if approved else None}
+def entry(eid='e1', when='2026-10-29T11:00:00+08:00', cells=CELLS, approved=True, status='pending', source=None):
+    e = {'id': eid, 'type': 'thread', 'title': '標題行', 'status': status, 'scheduled_at': when,
+         'posts': [{'seq': i + 1, 'content': c} for i, c in enumerate(cells)],
+         'approved_hash': pc.content_hash(cells) if approved else None}
+    if source:
+        e['source'] = source
+    return e
 
 
 T1057 = datetime(2026, 10, 29, 10, 57, tzinfo=pc.TW)
 T1230 = datetime(2026, 10, 29, 12, 30, tzinfo=pc.TW)
 
 
-def run(w, mode, task):
+def run(w, mode, task, cross='dry'):
     install(w)
-    ps.MODE, ps.TASK = mode, task
-    {'publish': ps.run_publish, 'compare': ps.run_compare, 'watch': ps.run_watch}[task]()
+    ps.MODE, ps.CROSS_MODE, ps.TASK = mode, cross, task
+    {'publish': ps.run_publish, 'compare': ps.run_compare, 'watch': ps.run_watch,
+     'preflight': ps.run_preflight}[task]()
 
 
 # 1 空跑：不寫佇列、不發布、逐格建容器、寫空跑紀錄
@@ -270,12 +274,79 @@ run(w, 'dry', 'publish')
 ck('空跑只看今天：昨天的不報晚', not ps.NOTES, ps.NOTES)
 
 # 14 空跑模式下任何寫佇列的呼叫都會被擋
-ps.MODE = 'dry'
+ps.MODE, ps.CROSS_MODE = 'dry', 'dry'
 try:
     ps.write_scheduled_file([], None, 'x')
     ck('空跑寫佇列會丟錯', False)
 except RuntimeError:
     ck('空跑寫佇列會丟錯', True)
+
+# 16 19:00 跨發（RCF-295）：11:00 空跑、19:00 正式同時存在
+CROSS = ['跨發標題\n\u200b\n第一格', '第二格']
+A1100 = '2026-11-08T11:00:00+08:00'
+A1900 = '2026-11-08T19:00:00+08:00'
+T1857 = datetime(2026, 11, 8, 18, 57, tzinfo=pc.TW)
+T1057B = datetime(2026, 11, 8, 10, 57, tzinfo=pc.TW)
+T2030 = datetime(2026, 11, 8, 20, 30, tzinfo=pc.TW)
+
+
+def two(status19='pending'):
+    return [entry('m', A1100), entry('x', A1900, cells=CROSS, source=ps.CROSS_SOURCE, status=status19)]
+
+
+w = World(two(), T1857)
+run(w, 'dry', 'publish', cross='live')
+q = {e['id']: e for e in w.files[ps.FILE_PATH]}
+ck('18:57：不把 11:00 那筆報成晚了（每天假警報）', not ps.NOTES, ps.NOTES)
+ck('18:57：跨發真的發出', q['x']['status'] == 'published' and q['x'].get('readback', {}).get('ok') is True, q['x'])
+ck('18:57：11:00 空跑那筆不被動到', q['m']['status'] == 'pending' and 'error' not in q['m'], q['m'])
+ck('18:57：串成一串', [r for _, r in w.containers] == [None, 'p1'], w.containers)
+
+w = World(two(), T1857)
+run(w, 'dry', 'publish', cross='dry')
+ck('兩邊都空跑：18:57 不報晚、不寫佇列', not ps.NOTES and ps.FILE_PATH not in w.puts, (ps.NOTES, w.puts))
+ck('兩邊都空跑：18:57 只處理跨發', [r['entry'] for r in w.files[ps.DRY_LOG_PATH]] == ['x'], w.files[ps.DRY_LOG_PATH])
+
+w = World(two(), T1057B)
+run(w, 'dry', 'publish', cross='live')
+ck('10:57：跨發還沒到時間不碰', {e['id']: e['status'] for e in w.files[ps.FILE_PATH]} == {'m': 'pending', 'x': 'pending'} and not w.published)
+ck('10:57：11:00 照舊空跑', [r['entry'] for r in w.files[ps.DRY_LOG_PATH]] == ['m'], w.files[ps.DRY_LOG_PATH])
+
+own1100 = [{'id': 'R', 'text': CELLS[0], 'timestamp': '2026-11-08T03:00:00+0000', 'permalink': 'x'}]
+rep1100 = [{'id': 'a', 'text': CELLS[1], 'timestamp': '1', 'root_post': {'id': 'R'}, 'replied_to': {'id': 'R'}},
+           {'id': 'b', 'text': CELLS[2], 'timestamp': '2', 'root_post': {'id': 'R'}, 'replied_to': {'id': 'a'}}]
+w = World(two(), T2030, own_posts=own1100, replies=rep1100)
+run(w, 'dry', 'compare', cross='live')
+ck('20:30：跨發沒發 → 觸發補發', w.dispatches and 'publish-scheduled.yml' in w.dispatches[0][0] and any('19:00' in n for n in ps.NOTES), (w.dispatches, ps.NOTES))
+ck('20:30：不再比一次 11:00', not w.files[ps.DRY_LOG_PATH], w.files[ps.DRY_LOG_PATH])
+
+w = World(two('published'), T2030)
+run(w, 'dry', 'compare', cross='live')
+ck('20:30：跨發已發 → 不補、不推', not w.dispatches and not ps.NOTES, (w.dispatches, ps.NOTES))
+
+w = World([entry('x', '2026-11-07T19:00:00+08:00', cells=CROSS, source=ps.CROSS_SOURCE)], T1057B)
+run(w, 'dry', 'publish', cross='live')
+ck('昨天的跨發沒發：標 failed 並推', w.files[ps.FILE_PATH][0]['status'] == 'failed' and any('晚超過' in n for n in ps.NOTES), ps.NOTES)
+
+w = World(two(), T1857, own_posts=[{'id': 'h', 'text': '跨發標題\n\u200b\n手發', 'timestamp': '2026-11-08T10:50:00+0000', 'permalink': 'x'}])
+run(w, 'dry', 'publish', cross='live')
+ck('您已手發那篇：跨發取消、不重發', not w.published and {e['id']: e['status'] for e in w.files[ps.FILE_PATH]}['x'] == 'cancelled')
+
+w = World(two(), T1057B)
+run(w, 'dry', 'preflight', cross='live')
+ck('預跑：只建容器、不發布、不寫佇列', len(w.containers) == 2 and not w.published and ps.FILE_PATH not in w.puts, (w.containers, w.puts))
+ck('預跑：不碰 11:00 那筆', all(t.startswith('跨發') or t == '第二格' for t, _ in w.containers), w.containers)
+ck('預跑：正常不推', not ps.NOTES, ps.NOTES)
+
+bad = entry('x', A1900, cells=CROSS, source=ps.CROSS_SOURCE)
+bad['posts'][1]['content'] = '被偷改'
+w = World([bad], T1857)
+run(w, 'dry', 'publish', cross='live')
+ck('跨發雜湊不符：不發、標 failed', not w.published and w.files[ps.FILE_PATH][0]['status'] == 'failed' and any('核准' in n for n in ps.NOTES), ps.NOTES)
+
+w = World(two(), T1857)
+run(w, 'live', 'publish', cross='dry')
+ck('反向（11:00 正式、跨發空跑）：跨發不發', not w.published and w.files[ps.FILE_PATH][1]['status'] == 'pending')
 
 # 15 預設參數不可綁死連網函式（HQ tasks「看板禁止連網守衛擋不到 threads_get」，2026-10-30）：
 #    `opener=urllib.request.urlopen` 在定義時就綁死真函式，守衛換的是模組屬性，換不到它
