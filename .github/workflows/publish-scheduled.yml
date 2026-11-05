@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
     inputs:
       task:
-        description: 'publish＝發到期的串文；probe＝只驗 token／回覆權限／建不發布的容器；preflight＝未來 8 天跨發逐格建不發布的容器'
+        description: 'publish＝發到期的串文；probe＝只驗 token／回覆權限／建不發布的容器；preflight＝未來 10 天跨發逐格建不發布的容器'
         default: 'publish'
         type: choice
         options: [publish, probe, preflight]

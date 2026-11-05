@@ -12,7 +12,7 @@ publish_scheduled.py — Threads 排程發文（看板 A-28）
       watch    GitHub 自己的排程（publish-followup.yml；cron 04:30 UTC，2026-10-28～11-05 實際在台灣 18:30～20:44 才跑）：
                只看不發——當天該跑的沒跑、到期的文還沒發、週日彙總、token 到期提醒
       probe    手動：驗 token、回覆權限（threads_publishing_limit 需 threads_manage_replies）、建一個不發布的容器
-      preflight 手動：未來 8 天的 19:00 跨發逐格建不發布的容器（上線前與每批核准後驗 API 收不收；不發文、不寫佇列）
+      preflight 手動：未來 10 天的 19:00 跨發逐格建不發布的容器（上線前與每批核准後驗 API 收不收；不發文、不寫佇列）
   - 2026-11-05（HQ RCF-295）19:00 FB 跨發併入同一條路：佇列 source＝hq-fb-cross，模式看 CROSS_PUBLISH_MODE（Tim 裁直接上線，
     不空跑，改預跑＋A-09 每日核對）；11:00 原創仍看 PUBLISH_MODE。QStash 另加 18:57 發文、20:30 補發
   - 控制：a 核准雜湊／b 每次 1 則 ≤10 格、晚 2 小時不發／c 租約＋發前看近 48 小時首行／d 存每格編號讀回／
@@ -586,7 +586,7 @@ def run_preflight():
     now = now_tw()
     posts, _ = read_scheduled_file()
     todo = [e for e in posts if e.get('source') == CROSS_SOURCE and e.get('status') == 'pending'
-            and timedelta(0) <= pc.parse_ts(e['scheduled_at']) - now <= timedelta(days=8)]
+            and timedelta(0) <= pc.parse_ts(e['scheduled_at']) - now <= timedelta(days=10)]
     todo.sort(key=lambda e: pc.parse_ts(e['scheduled_at']))
     if not preflight():
         return
