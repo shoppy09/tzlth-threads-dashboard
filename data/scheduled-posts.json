@@ -29,15 +29,16 @@
       }
     ],
     "scheduled_at": "2026-10-29T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-28T11:05:22+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "團隊來了一個比你強的新人，最該先處理的不是他",
     "approved_hash": "48f0f65edaea74b908c1f57358c621494143aa2b7746120c6022844c7ccb0d50",
     "approved_at": "2026-10-28T11:05:22+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-10-29-Threads-強新人來了.md"
+    "source_draft": "2026-10-29-Threads-強新人來了.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "8cb8dbb3-67d6-4b5d-b238-bf1359c8f763",
@@ -69,15 +70,16 @@
       }
     ],
     "scheduled_at": "2026-10-30T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-28T11:05:22+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "被交辦一件超出能力的事，先拆開的不是工作",
     "approved_hash": "620fa1408139ae484bd6890c54ef7b27fca563a94a79a5e3ccca8d3d40dc54db",
     "approved_at": "2026-10-28T11:05:22+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-10-30-Threads-超出能力的交辦.md"
+    "source_draft": "2026-10-30-Threads-超出能力的交辦.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "74d0ae51-cba9-473a-bd49-899a1befe3e8",
@@ -101,15 +103,16 @@
       }
     ],
     "scheduled_at": "2026-10-28T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-28T11:07:15+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "一天被會議切成五段，可以先處理的三種會",
     "approved_hash": "5b6814fb846f524c4d65f6c16f27d60d2d7edf6f38d5ef031a443657b073ec64",
     "approved_at": "2026-10-28T11:07:15+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-10-28-Threads-被會議切成五段.md"
+    "source_draft": "2026-10-28-Threads-被會議切成五段.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "5b6053be-afce-42b6-aa13-adc63e857476",
@@ -133,15 +136,16 @@
       }
     ],
     "scheduled_at": "2026-10-31T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-28T16:20:41+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "同時想要兩件事，卡住你的往往不是選擇",
     "approved_hash": "cc4b9d5ba49efc5b04aeab488ffad7abd046c88bb3b6ba0a0da17bbf5ca0382a",
     "approved_at": "2026-10-28T16:20:41+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-10-31-Threads-顧問觀察兩個目標.md"
+    "source_draft": "2026-10-31-Threads-顧問觀察兩個目標.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "2c4478c2-87ac-45a8-97c4-57137a09abe8",
@@ -173,15 +177,16 @@
       }
     ],
     "scheduled_at": "2026-11-01T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "每次都願意通融的人，最後常被說雙標",
     "approved_hash": "fc5d1ed2e2bf09c2c7e0adeacc05f8d7dcee38c483b04d754203c2bf4c7b5b9f",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-01-Threads-原則與破例.md"
+    "source_draft": "2026-11-01-Threads-原則與破例.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "09f3d154-3998-4766-8252-a2bf4edf45c5",
@@ -213,15 +218,16 @@
       }
     ],
     "scheduled_at": "2026-11-02T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "看同事被當眾罵的那天，你的工作也會慢下來",
     "approved_hash": "1996b633bdae6f331b16a36a917f6f6895a7e4af214ca221b92cf77d65121e2d",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-02-Threads-看同事被罵.md"
+    "source_draft": "2026-11-02-Threads-看同事被罵.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "219b5ba1-791d-423e-80a6-9504a0b1b2c6",
@@ -245,15 +251,16 @@
       }
     ],
     "scheduled_at": "2026-11-03T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "報告交給 AI 整理之前，先自己做的三件事",
     "approved_hash": "d9a52df4dba2557dbeb7edb0337a253576b0bb3e9f59567ee45f61a57e202f24",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-03-Threads-報告交給AI之前.md"
+    "source_draft": "2026-11-03-Threads-報告交給AI之前.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "41a4ecd5-7bcb-4e32-b0eb-98cc4b6c3a0d",
@@ -285,15 +292,16 @@
       }
     ],
     "scheduled_at": "2026-11-04T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "案子收掉那一週最難熬的，常常不是沒事做",
     "approved_hash": "bec7440e37476e356a5348c1c0f72589bd191bfcdddb158a72d154108a6ce934",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-04-Threads-案子收掉那一週.md"
+    "source_draft": "2026-11-04-Threads-案子收掉那一週.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "37124bdc-dbd4-4909-8e97-31b7594750a9",
@@ -325,15 +333,16 @@
       }
     ],
     "scheduled_at": "2026-11-05T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "做服務業最累的，常常不是站一整天",
     "approved_hash": "18ac65704e161e6a6dc26f98fab096bd2cfbf806bb746a6561ca250f0ff2b9b6",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-05-Threads-做服務業最累的.md"
+    "source_draft": "2026-11-05-Threads-做服務業最累的.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "829582d5-e6b1-4900-b62c-60144e3abc0c",
@@ -365,15 +374,16 @@
       }
     ],
     "scheduled_at": "2026-11-06T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "茶水間那兩分鐘的閒聊，比你以為的更像工作",
     "approved_hash": "7146ff5efce6d452642ed23d9d75e61025cccdcf7cc7a0cb98a33d592911aff7",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-06-Threads-茶水間閒聊.md"
+    "source_draft": "2026-11-06-Threads-茶水間閒聊.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "c4e58e11-7885-4d9d-9b54-01c7d85c7436",
@@ -397,15 +407,16 @@
       }
     ],
     "scheduled_at": "2026-11-07T11:00:00+08:00",
-    "status": "pending",
+    "status": "cancelled",
     "created_at": "2026-10-30T09:09:03+08:00",
     "published_at": null,
-    "error": null,
+    "error": "retired: 空跑期遺留，切正式前清掉（RCF-278）",
     "title": "覺得經驗沒辦法量化，先別急著學量化",
     "approved_hash": "9f918155f8a16a77bfd2196a62563dc524abd131a1c03bdd6ee215af3eb6263f",
     "approved_at": "2026-10-30T09:09:03+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-07-Threads-經驗沒辦法量化.md"
+    "source_draft": "2026-11-07-Threads-經驗沒辦法量化.md",
+    "cancelled_at": "2026-11-06T13:43:12+08:00"
   },
   {
     "id": "d3508eba-1a80-4574-abb6-9c0dbe981a2f",
