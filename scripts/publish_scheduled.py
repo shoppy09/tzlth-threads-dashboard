@@ -61,6 +61,8 @@ STATUS_UPDATE_RETRIES = 3
 GET_TRANSIENT_RETRIES = 3
 TRANSIENT_STATUSES = {502, 503, 504}
 CONTAINER_WAIT_S = 30     # Meta 官方建議建立容器後平均等 30 秒再發布
+CONTAINER_POLL_S = 10     # 30 秒後還在 IN_PROGRESS：每 10 秒再查（HQ 2026-11-06 L2）
+CONTAINER_MAX_WAIT_S = 120  # 單格最多等 2 分鐘；租約 LEASE_TIMEOUT_MINUTES＝20 分鐘要容得下 6 格
 NOTES = []                # 本次要推給 Tim 的異常（最後一次合併推）
 SUMMARY = []              # 寫進 Actions 摘要（公開 repo：只寫標題與結果，不寫全文以外的東西）
 
@@ -216,8 +218,44 @@ def create_container(text, reply_to=None):
     return c['id']
 
 
-def publish_container(cid):
+def container_status(cid):
+    """回傳 (status, error_message)；讀不到回 (None, 原因)。官方值：FINISHED／IN_PROGRESS／ERROR／EXPIRED／PUBLISHED。"""
+    try:
+        r = threads_get(f'/{cid}?fields=status,error_message')
+    except Exception as e:  # noqa: BLE001
+        return None, str(e)[:120]
+    return r.get('status'), r.get('error_message')
+
+
+def wait_container(cid):
+    """發布前確認容器好了（HQ 2026-11-06 Threads 排程評估 L2；官方文件：容器建立後平均等 30 秒，
+    可查 status；這裡先等 30 秒再查，IN_PROGRESS 每 CONTAINER_POLL_S 秒再查，最多等到 CONTAINER_MAX_WAIT_S）。
+    ERROR／EXPIRED／PUBLISHED → 不發布、丟例外（由呼叫端記成該格失敗，與既有「發到一半不重試」一致）。
+    讀不到狀態（API 沒回 status 或連線錯）→ 照舊直接發布：不讓查狀態這一步變成新的失敗點。
+    租約 20 分鐘：6 格 × (120＋2) 秒＝12.2 分鐘，仍在租約內。"""
     time.sleep(CONTAINER_WAIT_S)
+    st, err = poll_status(cid, CONTAINER_WAIT_S)
+    if st == 'FINISHED':
+        return
+    if st is None:
+        print(f'  container {cid} status unreadable（{err or "no status"}）→ publish as before', flush=True)
+        return
+    raise RuntimeError(f'container {st}: {err or ""}'.strip() if st != 'IN_PROGRESS'
+                       else f'container still IN_PROGRESS after {CONTAINER_MAX_WAIT_S}s')
+
+
+def poll_status(cid, waited=0):
+    """IN_PROGRESS 就每 CONTAINER_POLL_S 秒再查，到 CONTAINER_MAX_WAIT_S 為止；回傳最後一次 (status, error)。"""
+    while True:
+        st, err = container_status(cid)
+        if st != 'IN_PROGRESS' or waited >= CONTAINER_MAX_WAIT_S:
+            return st, err
+        time.sleep(CONTAINER_POLL_S)
+        waited += CONTAINER_POLL_S
+
+
+def publish_container(cid):
+    wait_container(cid)
     r = threads_post(f'/{get_user_id()}/threads_publish', {'creation_id': cid})
     if 'id' not in r:
         raise RuntimeError(f'publish failed: {r}')
@@ -595,18 +633,38 @@ def run_preflight():
     if not perm:
         note(f'Threads 預跑：token 沒有發回覆的權限，串文第 2 格以後會失敗。{str(detail)[:80]}')
     bad = 0
+    results = []      # (entry, cells, errs, [(格號, 容器編號)])
     for e in todo:
         ok, _code, why = pc.check_entry(e)
         cells = cells_of(e)
-        errs = [] if ok else [why]
+        errs, cids = ([] if ok else [why]), []
         if ok:
             for i, c in enumerate(cells, 1):
                 try:
-                    create_container(pc.normalize_cell(c))
+                    cids.append((i, create_container(pc.normalize_cell(c))))
                 except Exception as ex:  # noqa: BLE001
                     errs.append(f'第 {i} 格：{str(ex)[:80]}')
+        results.append((e, cells, errs, cids))
+    # 發布前查狀態（L2）同一條路：全部建完等一次 30 秒，再逐格查（不發布）
+    tally = {'FINISHED': 0, 'unreadable': 0, 'other': 0}
+    if any(r[3] for r in results):
+        time.sleep(CONTAINER_WAIT_S)
+    for e, cells, errs, cids in results:
+        unread = 0
+        for i, cid in cids:
+            st, err = poll_status(cid, CONTAINER_WAIT_S)
+            if st == 'FINISHED':
+                tally['FINISHED'] += 1
+            elif st is None:
+                tally['unreadable'] += 1
+                unread += 1
+            else:
+                tally['other'] += 1
+                errs.append(f'第 {i} 格狀態 {st} {err or ""}'.strip())
         bad += bool(errs)
-        summary(f'- {label(e)}｜{len(cells)} 格｜{"API 每格都收（未發布）" if not errs else "；".join(errs)}')
+        ok_txt = 'API 每格都收、狀態 FINISHED（未發布）' if not unread else f'API 每格都收、狀態讀不到 {unread} 格（未發布）'
+        summary(f'- {label(e)}｜{len(cells)} 格｜{ok_txt if not errs else "；".join(errs)}')
+    summary(f'- 容器狀態：FINISHED {tally["FINISHED"]}｜讀不到 {tally["unreadable"]}｜其他 {tally["other"]}')
     summary(f'- 預跑合計 {len(todo)} 則，有問題 {bad} 則（未發布）')
     if bad:
         note(f'Threads 跨發預跑：{bad} 則有問題，明細看 Actions「Publish Scheduled Threads Posts」')

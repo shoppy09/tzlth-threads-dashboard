@@ -52,6 +52,8 @@ class World:
         self.dispatches = []
         self.pushes = []
         self.tim_cancels_during_wait = False
+        self.cstatus = {}         # 容器編號 → 依序回的 status（最後一個重複）；沒設就回 {}（＝讀不到狀態）
+        self.status_checks = []
         # 真實回應形狀（10-28 probe log）：有回覆權限時 data[0] 帶 reply_config
         self.publishing_limit = {'data': [{'quota_usage': 0, 'reply_quota_usage': 0,
                                            'reply_config': {'quota_total': 1000, 'quota_duration': 86400}}]}
@@ -99,6 +101,12 @@ class World:
         if path.startswith('/me/replies'):
             return {'data': self.replies}
         pid = path[1:].split('?')[0]
+        if 'fields=status' in path:
+            self.status_checks.append(pid)
+            seq = self.cstatus.get(pid) or self.cstatus.get('*')
+            if not seq:
+                return {}
+            return {'status': seq.pop(0) if len(seq) > 1 else seq[0], 'error_message': 'x' if 'ERROR' in seq[0] else None}
         if pid in self.published:
             i = self.published.index(pid)
             text = self.readback_text.get(i, self.published_texts()[i])
@@ -347,6 +355,52 @@ ck('跨發雜湊不符：不發、標 failed', not w.published and w.files[ps.FI
 w = World(two(), T1857)
 run(w, 'live', 'publish', cross='dry')
 ck('反向（11:00 正式、跨發空跑）：跨發不發', not w.published and w.files[ps.FILE_PATH][1]['status'] == 'pending')
+
+# 17 發布前查容器狀態（HQ 2026-11-06 Threads 排程評估 L2）
+w = World([entry()], T1057)
+w.cstatus = {'*': ['FINISHED']}
+run(w, 'live', 'publish')
+ck('L2：每格發布前都查了狀態', w.status_checks == ['c1', 'c2', 'c3'], w.status_checks)
+ck('L2：全 FINISHED 照常發完', w.files[ps.FILE_PATH][0]['status'] == 'published' and len(w.published) == 3)
+
+w = World([entry()], T1057)
+w.cstatus = {'c1': ['IN_PROGRESS', 'IN_PROGRESS', 'FINISHED'], '*': ['FINISHED']}
+run(w, 'live', 'publish')
+ck('L2：IN_PROGRESS 會再查，好了才發', w.status_checks.count('c1') == 3 and len(w.published) == 3, w.status_checks)
+
+w = World([entry()], T1057)
+w.cstatus = {'c2': ['ERROR'], '*': ['FINISHED']}
+run(w, 'live', 'publish')
+q = w.files[ps.FILE_PATH][0]
+ck('L2：第 2 格容器 ERROR → 不發這格、停在 1 格', len(w.published) == 1 and q['status'] == 'partially_published'
+   and q.get('published_count') == 1, (w.published, q.get('status'), q.get('error')))
+ck('L2：錯誤訊息寫出容器狀態', 'container ERROR' in (q.get('error') or ''), q.get('error'))
+
+w = World([entry()], T1057)
+w.cstatus = {'c1': ['ERROR'], '*': ['FINISHED']}
+run(w, 'live', 'publish')
+q = w.files[ps.FILE_PATH][0]
+ck('L2：第 1 格就 ERROR → 一格都不發、標 failed', not w.published and q['status'] == 'failed', (q.get('status'), q.get('error')))
+
+w = World([entry()], T1057)
+w.cstatus = {'c1': ['IN_PROGRESS'], '*': ['FINISHED']}
+run(w, 'live', 'publish')
+ck('L2：一直 IN_PROGRESS 到上限 → 不發', not w.published and
+   w.status_checks.count('c1') == 1 + (ps.CONTAINER_MAX_WAIT_S - ps.CONTAINER_WAIT_S) // ps.CONTAINER_POLL_S, w.status_checks)
+
+w = World([entry()], T1057)
+run(w, 'live', 'publish')
+ck('L2：讀不到狀態 → 照舊發（不新增失敗點）', len(w.published) == 3 and w.files[ps.FILE_PATH][0]['status'] == 'published')
+
+w = World(two(), T1857)
+w.cstatus = {'*': ['FINISHED']}
+run(w, 'dry', 'preflight', cross='live')
+ck('L2 預跑：建完逐格查狀態、不發布', len(w.status_checks) == 2 and not w.published, w.status_checks)
+ck('L2 預跑：摘要有狀態合計', any('FINISHED 2' in s for s in ps.SUMMARY), ps.SUMMARY)
+w = World(two(), T1857)
+w.cstatus = {'*': ['ERROR']}
+run(w, 'dry', 'preflight', cross='live')
+ck('L2 預跑：狀態 ERROR 算有問題並推', any('預跑' in n for n in ps.NOTES) and not w.published, ps.NOTES)
 
 # 15 預設參數不可綁死連網函式（HQ tasks「看板禁止連網守衛擋不到 threads_get」，2026-10-30）：
 #    `opener=urllib.request.urlopen` 在定義時就綁死真函式，守衛換的是模組屬性，換不到它
