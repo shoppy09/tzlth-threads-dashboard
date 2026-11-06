@@ -243,6 +243,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-11-06 | 【DEV/SOC】**11:00 原創改 live（2026-11-08 起，HQ RCF-278 補記）**：run_preflight 改涵蓋全部待發（測試 67 項、舊程式 2 項失敗）；預跑 run 42170095013 14 則 61 格全 FINISHED；兩支 workflow PUBLISH_MODE: live；退回＝改回 dry | HQ 分組場 5b64e28c | ✅ |
 | 2026-10-30 | 【DEV/SEC】**A1 看板一場**：空窗橫幅改由 refreshDashboard() 每次重算（`989dd5e`，v=25）；連網函式不再綁預設參數（`262294a`，測試 37 項）；19:00 跨發缺資料＝Threads 端沒貼、看板無誤。詳 archive | HQ 分組場 | ✅ |
 | 2026-10-29 | 【DEV/SEC】**Dependabot 8 個警示（HQ 看板 Dependabot 場，Tim「執行」）**：`4d96102` 移除未用 SDK 兩個、lockfile 升 body-parser 2.4.0／proxy-addr 2.0.8／qs 6.17.1；8 筆全在本機 server.js 路徑，Vercel 不部署 package*.json 故免重部署；01:48Z 全數 fixed。詳 archive | 總部視窗 | ✅ |
 | 2026-10-29 | 【DEV/SOC】**排程面板改善（HQ tasks「看板排程面板改善」，批次:B69）**：`b2f7f20` 全文展開、核准＋雜湊一致、空跑／正式與每篇結果（`?view=status`）、沒核准標不會發出、上限 10 格、回覆權限看 reply_config（測試 27→30）。詳 archive | 總部視窗 | ✅ 2026-10-29 HQ dev/deploy-verify/SYS-02-2026-10-29-sched-panel.md |
