@@ -7,6 +7,9 @@ name: Publish Scheduled Threads Posts
 # - 2026-11-05（HQ RCF-295）：QStash 另加台灣 18:57 觸發本檔發 19:00 FB 跨發；CROSS_PUBLISH_MODE 管跨發（Tim 裁直接上線），
 #   PUBLISH_MODE 管 11:00 原創。
 # - PUBLISH_MODE：dry＝空跑（不寫佇列、不發文）。空跑 ≥2 週、≥5 次，Tim 看過才改 live（HQ routine-automation-sop 第六節）。
+# - 2026-11-06：PUBLISH_MODE 改 live，11:00 原創從 2026-11-08 起正式發（Tim「從哪天開始自動發？→11/8」「按照你的建議，執行」；
+#   空跑 9 次全過、比對 10 次 9 同 1 異〔Tim 手發合格〕，Tim 裁縮短 2 週；11-06／11-07 待發已 retire；預跑 run 42170095013
+#   14 則 61 格全 FINISHED）。監督到 11-21；退回＝這兩支改回 dry。HQ RCF-278 補記。
 # - 換 Threads token 時一起改 THREADS_TOKEN_EXPIRES_ON（到期前 14 天起週日提醒、3 天內每天提醒）。
 on:
   workflow_dispatch:
@@ -62,7 +65,7 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
-          PUBLISH_MODE: dry
+          PUBLISH_MODE: live
           CROSS_PUBLISH_MODE: live
           TASK: ${{ inputs.task || 'publish' }}
           THREADS_TOKEN_EXPIRES_ON: '2026-12-15'

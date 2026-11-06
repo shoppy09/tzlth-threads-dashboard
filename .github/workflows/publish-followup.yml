@@ -4,6 +4,9 @@ name: Threads Publish Follow-up
 # 放在一起會讓 12:30 的成功蓋掉 11:00 的失敗。
 # - workflow_dispatch（Upstash QStash 每天台灣 12:30、20:30〔HQ RCF-295 19:00 跨發補發〕）：TASK=compare——空跑時讀 Tim 手發的那串逐格比對；
 #   正式時當天還沒發的觸發 publish-scheduled.yml 補發一次（本檔自己不發文）。
+# - 2026-11-06：PUBLISH_MODE 改 live，11:00 原創從 2026-11-08 起正式發（Tim「從哪天開始自動發？→11/8」「按照你的建議，執行」；
+#   空跑 9 次全過、比對 10 次 9 同 1 異〔Tim 手發合格〕，Tim 裁縮短 2 週；11-06／11-07 待發已 retire；預跑 run 42170095013
+#   14 則 61 格全 FINISHED）。監督到 11-21；退回＝這兩支改回 dry。HQ RCF-278 補記。
 # - schedule（GitHub 自己的排程；2026-10-28～11-05 實際在台灣 18:30～20:44 才跑，HQ 2026-11-05 更正）：TASK=watch——只看不發：今天該跑的沒跑、還沒發出、週日彙總、token 到期。
 on:
   workflow_dispatch:
@@ -43,7 +46,7 @@ jobs:
           THREADS_ACCESS_TOKEN: ${{ secrets.THREADS_ACCESS_TOKEN }}
           LINE_CHANNEL_ACCESS_TOKEN: ${{ secrets.LINE_CHANNEL_ACCESS_TOKEN }}
           LINE_ADMIN_USER_ID: ${{ secrets.LINE_ADMIN_USER_ID }}
-          PUBLISH_MODE: dry
+          PUBLISH_MODE: live
           CROSS_PUBLISH_MODE: live
           TASK: ${{ github.event_name == 'schedule' && 'watch' || inputs.task || 'compare' }}
           THREADS_TOKEN_EXPIRES_ON: '2026-12-15'
