@@ -342,9 +342,16 @@ ck('您已手發那篇：跨發取消、不重發', not w.published and {e['id']
 
 w = World(two(), T1057B)
 run(w, 'dry', 'preflight', cross='live')
-ck('預跑：只建容器、不發布、不寫佇列', len(w.containers) == 2 and not w.published and ps.FILE_PATH not in w.puts, (w.containers, w.puts))
-ck('預跑：不碰 11:00 那筆', all(t.startswith('跨發') or t == '第二格' for t, _ in w.containers), w.containers)
+ck('預跑：只建容器、不發布、不寫佇列', len(w.containers) == 5 and not w.published and ps.FILE_PATH not in w.puts, (w.containers, w.puts))
+ck('預跑：11:00 原創也預跑（2026-11-06，切正式前）', sum(t.startswith('標題行') for t, _ in w.containers) == 1
+   and sum(t.startswith('跨發') for t, _ in w.containers) == 1, w.containers)
 ck('預跑：正常不推', not ps.NOTES, ps.NOTES)
+
+w = World([entry('m', A1100, status='cancelled'), entry('far', '2026-11-19T11:00:00+08:00'),
+           entry('x', A1900, cells=CROSS, source=ps.CROSS_SOURCE)], T1057B)
+run(w, 'dry', 'preflight', cross='live')
+ck('預跑：已取消的不挑、超過 10 天的不挑', len(w.containers) == 2 and all(not t.startswith('標題行') for t, _ in w.containers),
+   w.containers)
 
 bad = entry('x', A1900, cells=CROSS, source=ps.CROSS_SOURCE)
 bad['posts'][1]['content'] = '被偷改'

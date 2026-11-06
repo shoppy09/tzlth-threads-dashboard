@@ -620,10 +620,11 @@ def token_reminder(now):
 
 
 def run_preflight():
-    """上線前與每批核准後：未來 8 天的跨發逐格建不發布的容器（不呼叫 threads_publish、不寫佇列）。"""
+    """上線前與每批核准後：未來 10 天的待發（11:00 原創與 19:00 跨發）逐格建不發布的容器（不呼叫 threads_publish、不寫佇列）。
+    2026-11-06（HQ RCF-278 補記，11:00 切正式前）：原本只挑跨發，週 10 原創 38 格從沒預跑過 ⇒ 改成全部待發都挑。"""
     now = now_tw()
     posts, _ = read_scheduled_file()
-    todo = [e for e in posts if e.get('source') == CROSS_SOURCE and e.get('status') == 'pending'
+    todo = [e for e in posts if e.get('status') == 'pending'
             and timedelta(0) <= pc.parse_ts(e['scheduled_at']) - now <= timedelta(days=10)]
     todo.sort(key=lambda e: pc.parse_ts(e['scheduled_at']))
     if not preflight():
@@ -667,7 +668,7 @@ def run_preflight():
     summary(f'- 容器狀態：FINISHED {tally["FINISHED"]}｜讀不到 {tally["unreadable"]}｜其他 {tally["other"]}')
     summary(f'- 預跑合計 {len(todo)} 則，有問題 {bad} 則（未發布）')
     if bad:
-        note(f'Threads 跨發預跑：{bad} 則有問題，明細看 Actions「Publish Scheduled Threads Posts」')
+        note(f'Threads 預跑：{bad} 則有問題，明細看 Actions「Publish Scheduled Threads Posts」')
 
 
 def run_probe():
