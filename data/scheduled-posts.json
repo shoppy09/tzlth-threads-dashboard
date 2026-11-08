@@ -652,16 +652,29 @@
       }
     ],
     "scheduled_at": "2026-11-08T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-08T11:03:52.551428+08:00",
     "error": null,
     "title": "想跟主管開口要一件事，準備的方向常常反了",
     "approved_hash": "21a4ca8c0f77cdca7f2879239bd29c7bb72b4915d0717aab0f4b1827fc0132db",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-08-Threads-開口要一件事.md",
-    "lease_acquired_at": "2026-11-08T11:00:00.355217+08:00"
+    "post_ids": [
+      "18065976143541117",
+      "18022641095948263",
+      "18116831804116912",
+      "18131023624854168",
+      "17927501460206034",
+      "18254598547308523"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfdvZPjjqyh",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfdvZPjjqyh"
+    }
   },
   {
     "id": "7e68874b-a09e-496c-bc04-ca4ed9c626cd",
