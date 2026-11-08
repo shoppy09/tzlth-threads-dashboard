@@ -432,16 +432,25 @@
       }
     ],
     "scheduled_at": "2026-11-08T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-05T22:45:34+08:00",
-    "published_at": null,
+    "published_at": "2026-11-08T19:01:18.128191+08:00",
     "error": null,
     "title": "履歷寫「有責任感」，為什麼對方還是記不住你",
     "approved_hash": "fe455bea97303df63728b3f4f8f6c8837a9ad64da9fe522fdb618a935414aca1",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-08-FB-個人特質寫哪一組.md",
-    "lease_acquired_at": "2026-11-08T19:00:00.456736+08:00"
+    "post_ids": [
+      "18154254373554155",
+      "17918412351540770"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfemU3XlbEm",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfemU3XlbEm"
+    }
   },
   {
     "id": "0a8ead3d-5efb-4c3b-832c-a881c0df1bd5",
