@@ -474,7 +474,7 @@
       }
     ],
     "scheduled_at": "2026-11-09T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-05T22:45:34+08:00",
     "published_at": null,
     "error": null,
@@ -482,7 +482,8 @@
     "approved_hash": "4d530218ae61b1ee7a4979ee8c0ef86cccfff80cab15ec908da4d6f1c41c0de2",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-09-FB-懂得溝通的優勢.md"
+    "source_draft": "2026-11-09-FB-懂得溝通的優勢.md",
+    "lease_acquired_at": "2026-11-09T19:00:00.391414+08:00"
   },
   {
     "id": "e0f8c53a-c694-4d90-b2a5-22c649d1da58",
