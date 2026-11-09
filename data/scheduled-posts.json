@@ -716,16 +716,29 @@
       }
     ],
     "scheduled_at": "2026-11-09T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-09T11:03:54.076420+08:00",
     "error": null,
     "title": "前公司裁掉你又回頭找你，先別急著覺得自己贏了",
     "approved_hash": "d685f922fa649fdae4bd700028aae5e7cf1b733a65a766251e14356126ef1eb7",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-09-Threads-前公司回頭找你.md",
-    "lease_acquired_at": "2026-11-09T11:00:00.315335+08:00"
+    "post_ids": [
+      "18080789300404455",
+      "17914401966555459",
+      "18013873397996568",
+      "18102517322383815",
+      "18083127323375550",
+      "18133134281492957"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfgUMJUGz0Z",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfgUMJUGz0Z"
+    }
   },
   {
     "id": "ccca5b40-294b-498d-aa53-2653c3e96e23",
