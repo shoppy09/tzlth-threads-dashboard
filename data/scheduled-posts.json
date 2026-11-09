@@ -716,7 +716,7 @@
       }
     ],
     "scheduled_at": "2026-11-09T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-06T08:58:00+08:00",
     "published_at": null,
     "error": null,
@@ -724,7 +724,8 @@
     "approved_hash": "d685f922fa649fdae4bd700028aae5e7cf1b733a65a766251e14356126ef1eb7",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-09-Threads-前公司回頭找你.md"
+    "source_draft": "2026-11-09-Threads-前公司回頭找你.md",
+    "lease_acquired_at": "2026-11-09T11:00:00.315335+08:00"
   },
   {
     "id": "ccca5b40-294b-498d-aa53-2653c3e96e23",
