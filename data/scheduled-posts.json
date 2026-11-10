@@ -778,7 +778,7 @@
       }
     ],
     "scheduled_at": "2026-11-10T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-06T08:58:00+08:00",
     "published_at": null,
     "error": null,
@@ -786,7 +786,8 @@
     "approved_hash": "a0a7745bfdcbd88ddbbca5fb63dc9836265ece1063787616db170b75aae3335f",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-10-Threads-AI先說的理由.md"
+    "source_draft": "2026-11-10-Threads-AI先說的理由.md",
+    "lease_acquired_at": "2026-11-10T11:00:00.249687+08:00"
   },
   {
     "id": "2ac5ec6b-5a81-4812-9bfa-99236f0bae2d",
