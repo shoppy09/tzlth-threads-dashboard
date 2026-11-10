@@ -778,16 +778,28 @@
       }
     ],
     "scheduled_at": "2026-11-10T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-10T11:03:17.792222+08:00",
     "error": null,
     "title": "報告裡的理由都是 AI 先說的，你卻以為是你想的",
     "approved_hash": "a0a7745bfdcbd88ddbbca5fb63dc9836265ece1063787616db170b75aae3335f",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-10-Threads-AI先說的理由.md",
-    "lease_acquired_at": "2026-11-10T11:00:00.249687+08:00"
+    "post_ids": [
+      "18641259259045225",
+      "18154574686541230",
+      "18172130500495399",
+      "18126235058295183",
+      "18153630841544502"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfi4_DAEcKK",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfi4_DAEcKK"
+    }
   },
   {
     "id": "2ac5ec6b-5a81-4812-9bfa-99236f0bae2d",
