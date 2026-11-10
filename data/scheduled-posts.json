@@ -510,16 +510,25 @@
       }
     ],
     "scheduled_at": "2026-11-10T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-05T22:45:34+08:00",
-    "published_at": null,
+    "published_at": "2026-11-10T19:01:17.794686+08:00",
     "error": null,
     "title": "面試開場 60 秒就把自己講糊了",
     "approved_hash": "8abfd3602983d8156dc86068553ec856f41fcab79868e13aa7c8f99205c0305b",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-10-FB-重發-面試開場六十秒.md",
-    "lease_acquired_at": "2026-11-10T19:00:00.187130+08:00"
+    "post_ids": [
+      "17910709080326991",
+      "18134671843667466"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfjv6k-FWRJ",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfjv6k-FWRJ"
+    }
   },
   {
     "id": "de4e40b3-2e7d-4d2c-974f-890b75418cfc",
