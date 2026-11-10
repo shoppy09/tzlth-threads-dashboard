@@ -231,6 +231,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 **本 repo 在地特例（保留）**：
 - git push 目標＝shoppy09/tzlth-threads-dashboard；`follower-history.json`/`threads-data.json`/.js/.html 修改必 push（總部儀表板從 GitHub API 讀取，不 push＝看不到）
 - 資料抓取由 tzlth-hq `fetch-threads.yml`（canonical，每天 09:00/21:00）自動 fetch+push；手動修改必手動 push
+- ⛔ **排程發文程式改動 push 後看雲端綠燈才算完成**（2026-11-10，HQ A-76 延伸，HQ tasks 批次:B88）：改到 `scripts/publish_scheduled.py`、`publish_controls.py`、`notify_line.py`、`tests/**` 或兩支發文 workflow，push 後 `gh run list -R shoppy09/tzlth-threads-dashboard -w publish-tests-on-push.yml -L 1` 要綠；紅燈＝修好才算完成。該 workflow 環境與發文相同（不裝套件），⛔ 不要在它或發文 workflow 加 pip install。刻意做紅燈實驗後要立刻補跑一次綠的（HQ 健康巡查讀每支 workflow 最近一次結果）
 - 前端（.js/.html）改動：push 後 `npx vercel --prod`（auto-deploy 已停用 2026-04-29）
   > ⛔ **部署前先 commit、部署後查**（2026-10-15 總部 tasks L879，RCF-246）：總部 `python -X utf8 scripts/deploy_status.py 看板` 比對線上 `/api/version` 的 commit 與 origin 最新前端改動（排除 `.vercelignore`、`*.md`、`threads-data.json`、`follower-history.json`、`data/`）；總部看門狗每日 04:20 也巡。CLI 部署的是工作樹：有未 commit 的改動就部署，端點回報的仍是 HEAD，查不出來
   > ✅ **2026-08-23 dashboard 實查確認**：本 repo Deployments **回溯至 2026-04-29 零 git-source 部署** ⇒ 停用屬實，本欄正確（本專案即 IMP-088 當日的 Ignored Build Step 處置對象）。
@@ -243,6 +244,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-11-10 | 【DEV/SOC】**排程發文程式 push 即跑雲端自測（HQ A-76 延伸，批次:B88）**：新增 `publish-tests-on-push.yml`（`e2a703b`，與發文同環境、不裝套件、三行自測）；首跑 42744827603 綠；回測樣本 import PIL 紅（42745364444）後補跑綠（42745401736）；在地特例加「push 後看綠燈」 | HQ 分組場 A-76 | ✅ |
 | 2026-11-06 | 【DEV/SOC】**11:00 原創改 live（2026-11-08 起，HQ RCF-278 補記）**：run_preflight 改涵蓋全部待發（測試 67 項、舊程式 2 項失敗）；預跑 run 42170095013 14 則 61 格全 FINISHED；兩支 workflow PUBLISH_MODE: live；退回＝改回 dry | HQ 分組場 5b64e28c | ✅ |
 | 2026-10-30 | 【DEV/SEC】**A1 看板一場**：空窗橫幅改由 refreshDashboard() 每次重算（`989dd5e`，v=25）；連網函式不再綁預設參數（`262294a`，測試 37 項）；19:00 跨發缺資料＝Threads 端沒貼、看板無誤。詳 archive | HQ 分組場 | ✅ |
 | 2026-10-29 | 【DEV/SEC】**Dependabot 8 個警示（HQ 看板 Dependabot 場，Tim「執行」）**：`4d96102` 移除未用 SDK 兩個、lockfile 升 body-parser 2.4.0／proxy-addr 2.0.8／qs 6.17.1；8 筆全在本機 server.js 路徑，Vercel 不部署 package*.json 故免重部署；01:48Z 全數 fixed。詳 archive | 總部視窗 | ✅ |
