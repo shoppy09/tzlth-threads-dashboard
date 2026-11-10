@@ -1,0 +1,51 @@
+name: 發布測試（push 觸發，雲端環境）
+
+# HQ A-76 延伸（2026-11-10，HQ tasks 批次:B88）：改到排程發文會用到的檔，push 當下就在「跟 publish-scheduled.yml
+# 同一個雲端環境」跑同樣三行自測，紅燈在改完當場看到，不必等 10:57／18:57 發文時才露出
+# （同型事故：2026-11-07 官網排程因雲端少 Pillow 停發，HQ IMP-320）。
+#
+# 環境刻意與 publish-scheduled.yml 相同：ubuntu、Python 3.11、不裝任何套件。
+# ⛔ 不要在這裡加 pip install：那會讓兩邊環境又不一樣，正是這支要防的事。
+# 本 workflow 唯讀、不用密鑰、不發文、不推 LINE；concurrency 與發文的 threads-publish 群組分開，不會排在發文後面。
+# 本 repo 公開 ⇒ 日誌公開；三支自測只印假資料。
+#
+# ⛔ 改到下面 paths 的檔：push 後看這支綠燈才算完成（gh run list -R shoppy09/tzlth-threads-dashboard -w publish-tests-on-push.yml -L 1）。
+# ⚠️ HQ 健康巡查（A-09）會讀本 repo 每支 workflow 48 小時內最近一次結果；刻意做紅燈實驗後要立刻補跑一次綠的。
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'scripts/publish_scheduled.py'
+      - 'scripts/publish_controls.py'
+      - 'scripts/notify_line.py'
+      - 'tests/**'
+      - '.github/workflows/publish-scheduled.yml'
+      - '.github/workflows/publish-followup.yml'
+      - '.github/workflows/publish-tests-on-push.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-tests-on-push-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v5
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 發布前自測（與 publish-scheduled.yml 同三行）
+        run: |
+          python scripts/publish_controls.py
+          python scripts/notify_line.py --selftest
+          python tests/test_publish_scheduled.py
