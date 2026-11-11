@@ -1,5 +1,6 @@
 const https = require('https');
 const { guard } = require('../lib/request-guard');
+const { settleJson, errorStatus } = require('../lib/parse-json');  // 2026-11-11 HQ L174：壞回應不再掛住
 
 function httpsPost(hostname, path, params) {
   const body = new URLSearchParams(params).toString();
@@ -30,17 +31,17 @@ function httpsPost(hostname, path, params) {
 module.exports = async (req, res) => {
   if (!guard(req, res, { json: false })) return;
   const token = process.env.THREADS_ACCESS_TOKEN;
-  if (!token) return res.status(500).json({ error: 'THREADS_ACCESS_TOKEN 未設定' });
+  if (!token) return res.status(500).json({ error: 'THREADS_ACCESS_TOKEN 未設定', message: '❌ THREADS_ACCESS_TOKEN 未設定' });
 
   try {
     // Step 1: 取得 userId + username
     const profile = await new Promise((resolve, reject) => {
       https.get(
         `https://graph.threads.net/v1.0/me?fields=id,username&access_token=${token}`,
-        r => { let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(JSON.parse(d))); }
+        r => { let d = ''; r.on('data', c => d += c); r.on('end', () => settleJson(resolve, reject, d, 'Threads（取帳號）', r.statusCode)); }
       ).on('error', reject);
     });
-    if (profile.error) return res.status(401).json({ error: 'Token 無效', detail: profile.error.message });
+    if (profile.error) return res.status(401).json({ error: 'Token 無效', detail: profile.error.message, message: '❌ Token 無效：' + profile.error.message });
     const userId = profile.id;
 
     // Step 2: 嘗試建立測試 container（不實際發布）
@@ -74,6 +75,6 @@ module.exports = async (req, res) => {
       });
     }
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(errorStatus(err)).json({ error: err.message, message: '❌ ' + err.message });
   }
 };

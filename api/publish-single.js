@@ -1,5 +1,6 @@
 const https = require('https');
 const { guard } = require('../lib/request-guard');
+const { settleJson, errorStatus } = require('../lib/parse-json');  // 2026-11-11 HQ L174：壞回應不再掛住
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -45,7 +46,7 @@ module.exports = async (req, res) => {
       const me = await new Promise((resolve, reject) => {
         https.get(
           `https://graph.threads.net/v1.0/me?fields=id&access_token=${token}`,
-          r => { let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(JSON.parse(d))); }
+          r => { let d = ''; r.on('data', c => d += c); r.on('end', () => settleJson(resolve, reject, d, 'Threads（取帳號 ID）', r.statusCode)); }
         ).on('error', reject);
       });
       if (!me.id) return res.status(500).json({ error: '無法取得 userId', detail: me });
@@ -78,7 +79,7 @@ module.exports = async (req, res) => {
       const details = await new Promise((resolve, reject) => {
         https.get(
           `https://graph.threads.net/v1.0/${postId}?fields=permalink&access_token=${token}`,
-          r => { let d = ''; r.on('data', c => d += c); r.on('end', () => resolve(JSON.parse(d))); }
+          r => { let d = ''; r.on('data', c => d += c); r.on('end', () => settleJson(resolve, reject, d, 'Threads（取連結）', r.statusCode)); }
         ).on('error', reject);
       });
       permalink = details.permalink || null;
@@ -86,6 +87,6 @@ module.exports = async (req, res) => {
 
     res.json({ success: true, postId, userId, permalink });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(errorStatus(e)).json({ error: e.message, message: '❌ ' + e.message });
   }
 };

@@ -1,5 +1,6 @@
 const https = require('https');
 const { guard } = require('../lib/request-guard');
+const { settleJson, errorStatus } = require('../lib/parse-json');  // 2026-11-11 HQ L174：壞回應不再掛住
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
@@ -27,7 +28,7 @@ module.exports = async (req, res) => {
       const req2 = https.request(options, r => {
         let data = '';
         r.on('data', d => data += d);
-        r.on('end', () => resolve({ status: r.statusCode, body: JSON.parse(data) }));
+        r.on('end', () => settleJson(body => resolve({ status: r.statusCode, body }), reject, data, 'Gemini', r.statusCode));
       });
       req2.on('error', reject);
       req2.write(payload);
@@ -38,6 +39,6 @@ module.exports = async (req, res) => {
     if (!text) return res.status(500).json({ error: 'Gemini 無回應' });
     res.json({ success: true, result: text });
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    res.status(errorStatus(e)).json({ error: e.message, message: '❌ ' + e.message });
   }
 };
