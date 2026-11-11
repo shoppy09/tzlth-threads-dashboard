@@ -244,6 +244,7 @@ Token 必須有 `threads_content_publish` scope，可用「測試發文權限」
 
 | 日期 | 修改內容 | 執行視窗 | 狀態 |
 |------|---------|---------|------|
+| 2026-11-11 | 【DEV/SEC】**API 回應解析加防護（HQ tasks L174）**：nl-convert／publish-single／test-publish 4 處壞回應不再掛到逾時，回 502＋message（`lib/parse-json.js`，`4a540b4`）；node --test 17/17、線上驗證 ✅。詳 archive／HQ deploy-verify SYS-02-2026-11-11-json-guard | HQ 主對話 5b64e28c | ✅ |
 | 2026-11-10 | 【DEV/SOC】**排程發文程式 push 即跑雲端自測（HQ A-76 延伸，批次:B88）**：新增 `publish-tests-on-push.yml`（`e2a703b`，與發文同環境、不裝套件、三行自測）；首跑 42744827603 綠；回測樣本 import PIL 紅（42745364444）後補跑綠（42745401736）；在地特例加「push 後看綠燈」 | HQ 分組場 A-76 | ✅ |
 | 2026-11-06 | 【DEV/SOC】**11:00 原創改 live（2026-11-08 起，HQ RCF-278 補記）**：run_preflight 改涵蓋全部待發（測試 67 項、舊程式 2 項失敗）；預跑 run 42170095013 14 則 61 格全 FINISHED；兩支 workflow PUBLISH_MODE: live；退回＝改回 dry | HQ 分組場 5b64e28c | ✅ |
 | 2026-10-30 | 【DEV/SEC】**A1 看板一場**：空窗橫幅改由 refreshDashboard() 每次重算（`989dd5e`，v=25）；連網函式不再綁預設參數（`262294a`，測試 37 項）；19:00 跨發缺資料＝Threads 端沒貼、看板無誤。詳 archive | HQ 分組場 | ✅ |
