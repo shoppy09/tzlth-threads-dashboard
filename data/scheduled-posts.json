@@ -552,16 +552,27 @@
       }
     ],
     "scheduled_at": "2026-11-11T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-05T22:45:34+08:00",
-    "published_at": null,
+    "published_at": "2026-11-11T19:02:46.011668+08:00",
     "error": null,
     "title": "都加薪了，部屬為何還是不開心？",
     "approved_hash": "e69b5073115351b18b1fbe76f317818228e2aebda2261a73ac37fd65a56274db",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-11-FB-加薪了還是不開心.md",
-    "lease_acquired_at": "2026-11-11T19:00:00.295964+08:00"
+    "post_ids": [
+      "18219980776360847",
+      "18118675640033435",
+      "17880739434634249",
+      "18148012693590139"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfmUtkXESSQ",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfmUtkXESSQ"
+    }
   },
   {
     "id": "b4c93b58-7012-479c-9c31-72f41c59a790",
