@@ -552,7 +552,7 @@
       }
     ],
     "scheduled_at": "2026-11-11T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-05T22:45:34+08:00",
     "published_at": null,
     "error": null,
@@ -560,7 +560,8 @@
     "approved_hash": "e69b5073115351b18b1fbe76f317818228e2aebda2261a73ac37fd65a56274db",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-11-FB-加薪了還是不開心.md"
+    "source_draft": "2026-11-11-FB-加薪了還是不開心.md",
+    "lease_acquired_at": "2026-11-11T19:00:00.295964+08:00"
   },
   {
     "id": "b4c93b58-7012-479c-9c31-72f41c59a790",
