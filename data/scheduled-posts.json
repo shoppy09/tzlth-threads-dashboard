@@ -841,7 +841,7 @@
       }
     ],
     "scheduled_at": "2026-11-11T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-06T08:58:00+08:00",
     "published_at": null,
     "error": null,
@@ -849,7 +849,8 @@
     "approved_hash": "b45bf24501b42a4a457c939afa244181a8fc3d0bff1c4a30691e691bd75e20c4",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-11-Threads-不交接就走.md"
+    "source_draft": "2026-11-11-Threads-不交接就走.md",
+    "lease_acquired_at": "2026-11-11T11:00:00.523174+08:00"
   },
   {
     "id": "d9a7daf3-6081-49af-b168-1e0f7d555673",
