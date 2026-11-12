@@ -596,16 +596,27 @@
       }
     ],
     "scheduled_at": "2026-11-12T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-05T22:45:34+08:00",
-    "published_at": null,
+    "published_at": "2026-11-12T19:02:34.532486+08:00",
     "error": null,
     "title": "資深員工好難帶，老扯後腿影響團隊士氣，主管該怎麼辦？",
     "approved_hash": "83da0ea21d140e17cb09363137693164f7da5d23689c58cb9d8caa0c6f20d324",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-12-FB-資深員工難帶.md",
-    "lease_acquired_at": "2026-11-12T19:00:00.327733+08:00"
+    "post_ids": [
+      "18161122084511538",
+      "18130163441484850",
+      "18050393573825101",
+      "18145772320719489"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfo5gVLlmR3",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfo5gVLlmR3"
+    }
   },
   {
     "id": "9ba62671-4e8a-43f8-9fee-31ad1b8a9b56",
