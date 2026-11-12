@@ -899,7 +899,7 @@
       }
     ],
     "scheduled_at": "2026-11-12T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-06T08:58:00+08:00",
     "published_at": null,
     "error": null,
@@ -907,7 +907,8 @@
     "approved_hash": "e934ae39007e888817b40f23fa7997e9c5d42515e515c902c1b5db512334b1cf",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-12-Threads-面試邀約分三類.md"
+    "source_draft": "2026-11-12-Threads-面試邀約分三類.md",
+    "lease_acquired_at": "2026-11-12T11:00:00.765681+08:00"
   },
   {
     "id": "cc030d23-d102-46e6-8eb6-da462fbbc5cc",
