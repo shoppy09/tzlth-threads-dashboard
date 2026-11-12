@@ -596,7 +596,7 @@
       }
     ],
     "scheduled_at": "2026-11-12T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-05T22:45:34+08:00",
     "published_at": null,
     "error": null,
@@ -604,7 +604,8 @@
     "approved_hash": "83da0ea21d140e17cb09363137693164f7da5d23689c58cb9d8caa0c6f20d324",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-12-FB-資深員工難帶.md"
+    "source_draft": "2026-11-12-FB-資深員工難帶.md",
+    "lease_acquired_at": "2026-11-12T19:00:00.327733+08:00"
   },
   {
     "id": "9ba62671-4e8a-43f8-9fee-31ad1b8a9b56",
