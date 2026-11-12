@@ -899,16 +899,27 @@
       }
     ],
     "scheduled_at": "2026-11-12T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-12T11:02:35.320510+08:00",
     "error": null,
     "title": "一週收到五封面試邀約，先分成這三類再回",
     "approved_hash": "e934ae39007e888817b40f23fa7997e9c5d42515e515c902c1b5db512334b1cf",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-12-Threads-面試邀約分三類.md",
-    "lease_acquired_at": "2026-11-12T11:00:00.765681+08:00"
+    "post_ids": [
+      "18118850627331240",
+      "18109698101342687",
+      "18236490847323835",
+      "18223820179348866"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfoCk1oFWtM",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfoCk1oFWtM"
+    }
   },
   {
     "id": "cc030d23-d102-46e6-8eb6-da462fbbc5cc",
