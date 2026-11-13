@@ -959,7 +959,7 @@
       }
     ],
     "scheduled_at": "2026-11-13T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-06T08:58:00+08:00",
     "published_at": null,
     "error": null,
@@ -967,7 +967,8 @@
     "approved_hash": "034dc38daa20e17581879bfa3fea76194ea1c8fbde2c1840688b8dce58c688f5",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-13-Threads-兩個offer怎麼比.md"
+    "source_draft": "2026-11-13-Threads-兩個offer怎麼比.md",
+    "lease_acquired_at": "2026-11-13T11:00:00.347405+08:00"
   },
   {
     "id": "2d52a41f-f313-4008-8cb1-e54d5f005677",
