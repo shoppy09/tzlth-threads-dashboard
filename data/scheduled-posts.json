@@ -959,16 +959,28 @@
       }
     ],
     "scheduled_at": "2026-11-13T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-13T11:03:43.318567+08:00",
     "error": null,
     "title": "兩個 offer 差一萬多，真正要比的常常不在那張表上",
     "approved_hash": "034dc38daa20e17581879bfa3fea76194ea1c8fbde2c1840688b8dce58c688f5",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-13-Threads-兩個offer怎麼比.md",
-    "lease_acquired_at": "2026-11-13T11:00:00.347405+08:00"
+    "post_ids": [
+      "18115216295132538",
+      "18113794271142184",
+      "18101074094448436",
+      "18100627379654766",
+      "18159829744517942"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfqnXstjMnU",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfqnXstjMnU"
+    }
   },
   {
     "id": "2d52a41f-f313-4008-8cb1-e54d5f005677",
