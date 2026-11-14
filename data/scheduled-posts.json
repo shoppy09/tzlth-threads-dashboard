@@ -679,7 +679,7 @@
       }
     ],
     "scheduled_at": "2026-11-14T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-05T22:45:34+08:00",
     "published_at": null,
     "error": null,
@@ -687,7 +687,8 @@
     "approved_hash": "d388df244bca2ed3813039ac6e32c5659bcafb5ffbd7c72b03832767b2d102fe",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-14-FB-拿不出薪水談留才.md"
+    "source_draft": "2026-11-14-FB-拿不出薪水談留才.md",
+    "lease_acquired_at": "2026-11-14T19:00:00.313039+08:00"
   },
   {
     "id": "7b108266-efd6-44fd-831c-bb2848f2b4ec",
