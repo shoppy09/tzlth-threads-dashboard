@@ -1023,16 +1023,29 @@
       }
     ],
     "scheduled_at": "2026-11-14T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-06T08:58:00+08:00",
-    "published_at": null,
+    "published_at": "2026-11-14T11:03:54.664086+08:00",
     "error": null,
     "title": "全公司只有你會的那套系統，正在把你留在原地",
     "approved_hash": "ae8dac4ee1437bf40e33f378841d1d5a404c95e136fa89d1a3c6462ea51c4b10",
     "approved_at": "2026-11-06T08:58:00+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-14-Threads-只有你會的系統.md",
-    "lease_acquired_at": "2026-11-14T11:00:00.260638+08:00"
+    "post_ids": [
+      "18101902079552128",
+      "17957683755033268",
+      "18088177298323573",
+      "18231114304331777",
+      "18186088132425484",
+      "18048934958826970"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DftMKjDlo8l",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DftMKjDlo8l"
+    }
   },
   {
     "id": "5b321198-c3c2-4fb5-8b50-0fd6a7cbbf19",
