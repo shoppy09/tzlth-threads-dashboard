@@ -679,16 +679,27 @@
       }
     ],
     "scheduled_at": "2026-11-14T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-05T22:45:34+08:00",
-    "published_at": null,
+    "published_at": "2026-11-14T19:02:35.737238+08:00",
     "error": null,
     "title": "拿不出薪水，談什麼留才",
     "approved_hash": "d388df244bca2ed3813039ac6e32c5659bcafb5ffbd7c72b03832767b2d102fe",
     "approved_at": "2026-11-05T22:45:34+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-14-FB-拿不出薪水談留才.md",
-    "lease_acquired_at": "2026-11-14T19:00:00.313039+08:00"
+    "post_ids": [
+      "18122630269987053",
+      "17980123776206581",
+      "17913023907565380",
+      "18016317506968818"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfuDGKJlap2",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfuDGKJlap2"
+    }
   },
   {
     "id": "7b108266-efd6-44fd-831c-bb2848f2b4ec",
