@@ -1309,16 +1309,29 @@
       }
     ],
     "scheduled_at": "2026-11-15T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-15T11:03:56.213651+08:00",
     "error": null,
     "title": "開會總跟你唱反調的同事，不一定是針對你",
     "approved_hash": "9394a8a0f29dde41166693f33b36616b5d08501244393ff0cafc464ba574fbcf",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-15-Threads-唱反調的同事.md",
-    "lease_acquired_at": "2026-11-15T11:00:00.219301+08:00"
+    "post_ids": [
+      "18653361598009235",
+      "17896135650436420",
+      "17868605211676415",
+      "18018836033989811",
+      "17913443043304769",
+      "18204801940389868"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfvw9aaDr_T",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfvw9aaDr_T"
+    }
   },
   {
     "id": "385122bc-17e5-47c6-8dc0-d4aac67d4857",
