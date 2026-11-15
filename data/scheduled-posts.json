@@ -1309,7 +1309,7 @@
       }
     ],
     "scheduled_at": "2026-11-15T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T11:27:54+08:00",
     "published_at": null,
     "error": null,
@@ -1317,7 +1317,8 @@
     "approved_hash": "9394a8a0f29dde41166693f33b36616b5d08501244393ff0cafc464ba574fbcf",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-15-Threads-唱反調的同事.md"
+    "source_draft": "2026-11-15-Threads-唱反調的同事.md",
+    "lease_acquired_at": "2026-11-15T11:00:00.219301+08:00"
   },
   {
     "id": "385122bc-17e5-47c6-8dc0-d4aac67d4857",
