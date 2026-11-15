@@ -1081,16 +1081,27 @@
       }
     ],
     "scheduled_at": "2026-11-15T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T08:20:35+08:00",
-    "published_at": null,
+    "published_at": "2026-11-15T19:02:43.244470+08:00",
     "error": null,
     "title": "真正人緣好的人，才不會滿身「社交感」",
     "approved_hash": "62c54da38bf2152848833ab961c006b9c470e6047412ea4ccb00ab0bf5ee0c7b",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-15-FB-人緣與社交感.md",
-    "lease_acquired_at": "2026-11-15T19:00:00.233016+08:00"
+    "post_ids": [
+      "18212695573317519",
+      "18212134153320767",
+      "17957386497280822",
+      "17911623132577326"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfwn5MmFrdo",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Dfwn5MmFrdo"
+    }
   },
   {
     "id": "73c40485-d2e3-4c19-accd-28ac5bfc143a",
