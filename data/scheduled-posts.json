@@ -1081,7 +1081,7 @@
       }
     ],
     "scheduled_at": "2026-11-15T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1089,7 +1089,8 @@
     "approved_hash": "62c54da38bf2152848833ab961c006b9c470e6047412ea4ccb00ab0bf5ee0c7b",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-15-FB-人緣與社交感.md"
+    "source_draft": "2026-11-15-FB-人緣與社交感.md",
+    "lease_acquired_at": "2026-11-15T19:00:00.233016+08:00"
   },
   {
     "id": "73c40485-d2e3-4c19-accd-28ac5bfc143a",
