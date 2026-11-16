@@ -1375,7 +1375,7 @@
       }
     ],
     "scheduled_at": "2026-11-16T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T11:27:54+08:00",
     "published_at": null,
     "error": null,
@@ -1383,7 +1383,8 @@
     "approved_hash": "769c2fd3fb2f3418eb74d2655ce429cba60e0aff83571770128b56ef2c7897ba",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-16-Threads-想轉行想了三年.md"
+    "source_draft": "2026-11-16-Threads-想轉行想了三年.md",
+    "lease_acquired_at": "2026-11-16T11:00:00.351155+08:00"
   },
   {
     "id": "e1d2c51e-2871-42cc-8140-6a5e2e677b29",
