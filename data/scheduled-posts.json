@@ -1125,7 +1125,7 @@
       }
     ],
     "scheduled_at": "2026-11-16T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1133,7 +1133,8 @@
     "approved_hash": "de71996047615d585dd6b6fccc9cb4cb3b42ab57ff123c8619a1401a10dcac52",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-16-FB-被裁員了怎麼辦.md"
+    "source_draft": "2026-11-16-FB-被裁員了怎麼辦.md",
+    "lease_acquired_at": "2026-11-16T19:00:00.699135+08:00"
   },
   {
     "id": "0492b155-d0ad-4cfd-9c83-17645b2a3e27",
