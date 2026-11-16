@@ -1375,16 +1375,29 @@
       }
     ],
     "scheduled_at": "2026-11-16T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-16T11:03:47.298120+08:00",
     "error": null,
     "title": "想轉行想了三年，卡住你的不是勇氣",
     "approved_hash": "769c2fd3fb2f3418eb74d2655ce429cba60e0aff83571770128b56ef2c7897ba",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-16-Threads-想轉行想了三年.md",
-    "lease_acquired_at": "2026-11-16T11:00:00.351155+08:00"
+    "post_ids": [
+      "18072277856790522",
+      "17978991651188551",
+      "18014525222972465",
+      "18042323927844643",
+      "17940145920126968",
+      "17934187689421616"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfyVwTxlG7f",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DfyVwTxlG7f"
+    }
   },
   {
     "id": "e1d2c51e-2871-42cc-8140-6a5e2e677b29",
