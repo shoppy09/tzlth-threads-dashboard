@@ -1169,7 +1169,7 @@
       }
     ],
     "scheduled_at": "2026-11-17T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1177,7 +1177,8 @@
     "approved_hash": "f30b13fa85ca22933e326c57b2178428242efae400a33eb38a01c746380ae9bd",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-17-FB-面試問AI工具.md"
+    "source_draft": "2026-11-17-FB-面試問AI工具.md",
+    "lease_acquired_at": "2026-11-17T19:00:00.301623+08:00"
   },
   {
     "id": "382bd8c8-9e4d-44b3-afdc-e54fdf9155ac",
