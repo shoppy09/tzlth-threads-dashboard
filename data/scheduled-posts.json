@@ -1169,16 +1169,27 @@
       }
     ],
     "scheduled_at": "2026-11-17T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T08:20:35+08:00",
-    "published_at": null,
+    "published_at": "2026-11-17T19:02:49.167971+08:00",
     "error": null,
     "title": "面試問「可以用 AI 嗎」，用人主管其實在聽這 3 件事",
     "approved_hash": "f30b13fa85ca22933e326c57b2178428242efae400a33eb38a01c746380ae9bd",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-17-FB-面試問AI工具.md",
-    "lease_acquired_at": "2026-11-17T19:00:00.301623+08:00"
+    "post_ids": [
+      "18389975164239489",
+      "18042787607645068",
+      "18115961045172701",
+      "18098404181665462"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df1xeySHFCk",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df1xeySHFCk"
+    }
   },
   {
     "id": "382bd8c8-9e4d-44b3-afdc-e54fdf9155ac",
