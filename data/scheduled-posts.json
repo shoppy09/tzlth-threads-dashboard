@@ -1441,16 +1441,29 @@
       }
     ],
     "scheduled_at": "2026-11-17T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-17T11:03:50.112518+08:00",
     "error": null,
     "title": "拒絕過一次調派之後，主管就沒有再問過你",
     "approved_hash": "0aba002ef3d026ee449c1a50022c90b616f90a87bfca03aad1328f8df7e33913",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-17-Threads-拒絕調派之後.md",
-    "lease_acquired_at": "2026-11-17T11:00:01.320030+08:00"
+    "post_ids": [
+      "18653010997042198",
+      "18137194630822917",
+      "18118083116116906",
+      "17876044968641063",
+      "18120653393043862",
+      "18109828006967490"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df06jV3lEa7",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df06jV3lEa7"
+    }
   },
   {
     "id": "10027991-ad76-4672-b0e1-aa80467aabda",
