@@ -1213,7 +1213,7 @@
       }
     ],
     "scheduled_at": "2026-11-18T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1221,7 +1221,8 @@
     "approved_hash": "4c278aadb90e766d3ca3d3b81c3da048c58c30a11244466cb9d193c5742c9693",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-18-FB-別用離職威脅加薪.md"
+    "source_draft": "2026-11-18-FB-別用離職威脅加薪.md",
+    "lease_acquired_at": "2026-11-18T19:00:00.573722+08:00"
   },
   {
     "id": "ef2aab89-bcf0-4a5a-af46-b96400f9d3fb",
