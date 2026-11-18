@@ -1507,16 +1507,29 @@
       }
     ],
     "scheduled_at": "2026-11-18T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-18T11:03:57.050864+08:00",
     "error": null,
     "title": "傳訊息給主管之前，先改這 4 個地方",
     "approved_hash": "43743c6bd050fbad1f464fa2741693ab4264f9472b0566484057859b913ffcca",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-18-Threads-訊息先改四個地方.md",
-    "lease_acquired_at": "2026-11-18T11:00:00.544902+08:00"
+    "post_ids": [
+      "18167978017494182",
+      "18581117875079181",
+      "17916633231506563",
+      "17935315896162724",
+      "17919343836497758",
+      "18003126087034935"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df3fWIDINy7",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df3fWIDINy7"
+    }
   },
   {
     "id": "9e85a85c-328f-4799-85c8-0fc9790b327c",
