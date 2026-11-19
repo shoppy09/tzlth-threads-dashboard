@@ -1573,7 +1573,7 @@
       }
     ],
     "scheduled_at": "2026-11-19T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T11:27:54+08:00",
     "published_at": null,
     "error": null,
@@ -1581,7 +1581,8 @@
     "approved_hash": "171269df7a8f54f29976c7dedf003996ab4508f2b6cce7de7697d55f70f22cab",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-19-Threads-卡關時只問主管.md"
+    "source_draft": "2026-11-19-Threads-卡關時只問主管.md",
+    "lease_acquired_at": "2026-11-19T11:00:00.552469+08:00"
   },
   {
     "id": "380e7405-0d76-4bf7-9854-1189a1398cb9",
