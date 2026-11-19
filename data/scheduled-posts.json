@@ -1253,16 +1253,26 @@
       }
     ],
     "scheduled_at": "2026-11-19T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T08:20:35+08:00",
-    "published_at": null,
+    "published_at": "2026-11-19T19:02:03.104508+08:00",
     "error": null,
     "title": "等領完年終再走，最後這 2 個月最容易白白過去",
     "approved_hash": "415d4e9f87df4424cb11d6327dff0986137c3812520bda193ee872d591237d81",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-19-FB-等領完年終再走.md",
-    "lease_acquired_at": "2026-11-19T19:00:00.261130+08:00"
+    "post_ids": [
+      "18134950804844765",
+      "18118929887062150",
+      "17876411406599053"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df67EjDERxT",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df67EjDERxT"
+    }
   },
   {
     "id": "3fe41017-8d58-4ad8-90ce-fd9868a05df1",
