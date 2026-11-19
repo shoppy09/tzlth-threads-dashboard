@@ -1253,7 +1253,7 @@
       }
     ],
     "scheduled_at": "2026-11-19T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1261,7 +1261,8 @@
     "approved_hash": "415d4e9f87df4424cb11d6327dff0986137c3812520bda193ee872d591237d81",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-19-FB-等領完年終再走.md"
+    "source_draft": "2026-11-19-FB-等領完年終再走.md",
+    "lease_acquired_at": "2026-11-19T19:00:00.261130+08:00"
   },
   {
     "id": "3fe41017-8d58-4ad8-90ce-fd9868a05df1",
