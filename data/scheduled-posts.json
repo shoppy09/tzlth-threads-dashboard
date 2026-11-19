@@ -1573,16 +1573,29 @@
       }
     ],
     "scheduled_at": "2026-11-19T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-19T11:04:10.912583+08:00",
     "error": null,
     "title": "卡關時只問主管的人，常常繞了最遠的路",
     "approved_hash": "171269df7a8f54f29976c7dedf003996ab4508f2b6cce7de7697d55f70f22cab",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-19-Threads-卡關時只問主管.md",
-    "lease_acquired_at": "2026-11-19T11:00:00.552469+08:00"
+    "post_ids": [
+      "17927637393433352",
+      "18157042924542933",
+      "17871543036658258",
+      "18040650353656326",
+      "18076701407487679",
+      "18498142564105674"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df6EJDCkfJb",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df6EJDCkfJb"
+    }
   },
   {
     "id": "380e7405-0d76-4bf7-9854-1189a1398cb9",
