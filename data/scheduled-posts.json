@@ -1296,7 +1296,7 @@
       }
     ],
     "scheduled_at": "2026-11-20T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-12T08:20:35+08:00",
     "published_at": null,
     "error": null,
@@ -1304,7 +1304,8 @@
     "approved_hash": "ec38932575b9e4ace7e0b058eec9989ba3f0000742f256a6e3983272cdef25a4",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-20-FB-扮黑臉.md"
+    "source_draft": "2026-11-20-FB-扮黑臉.md",
+    "lease_acquired_at": "2026-11-20T19:00:00.298760+08:00"
   },
   {
     "id": "d87cd577-d3b6-438d-af16-f566ea4bdf9f",
