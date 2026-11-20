@@ -1638,16 +1638,29 @@
       }
     ],
     "scheduled_at": "2026-11-20T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-20T11:03:56.618536+08:00",
     "error": null,
     "title": "休假那天一直想回訊息，你缺的不是時間管理",
     "approved_hash": "4136045e708c76bb3f279601ea2b4fe072e8a618114b74777e3db585833366f8",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-20-Threads-休假一直想回訊息.md",
-    "lease_acquired_at": "2026-11-20T11:00:00.243526+08:00"
+    "post_ids": [
+      "18118732514104482",
+      "18131395759895506",
+      "18134276737810468",
+      "18455493544122523",
+      "17905940076375166",
+      "17914902132481221"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df8o7zroNK6",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df8o7zroNK6"
+    }
   },
   {
     "id": "001c850d-0324-4d61-a7ce-30e25d17b144",
