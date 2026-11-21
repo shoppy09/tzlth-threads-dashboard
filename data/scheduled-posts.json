@@ -1704,16 +1704,29 @@
       }
     ],
     "scheduled_at": "2026-11-21T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T11:27:54+08:00",
-    "published_at": null,
+    "published_at": "2026-11-21T11:04:00.345979+08:00",
     "error": null,
     "title": "開會時明明有想法，散會後才說出口",
     "approved_hash": "550c69f5f5995973d76c70a33a51ffcc7006d7474a25d560df847c6f5bec4e2d",
     "approved_at": "2026-11-12T11:27:54+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-21-Threads-散會後才說出口.md",
-    "lease_acquired_at": "2026-11-21T11:00:00.347734+08:00"
+    "post_ids": [
+      "18425278666158828",
+      "18165443641446739",
+      "18501813640096062",
+      "18111152990339509",
+      "17914079013303529",
+      "17967881973240883"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df_NutzkQLt",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/Df_NutzkQLt"
+    }
   },
   {
     "id": "a3a465e4-b261-405f-bef7-57eac2407053",
