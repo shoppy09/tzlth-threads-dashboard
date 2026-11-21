@@ -1340,16 +1340,27 @@
       }
     ],
     "scheduled_at": "2026-11-21T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-12T08:20:35+08:00",
-    "published_at": null,
+    "published_at": "2026-11-21T19:02:41.484668+08:00",
     "error": null,
     "title": "比起能力，EQ好更重要？",
     "approved_hash": "4e0c7da93dfb9e6234fb801f85d889004fe0d5028a285be9f2895c6035092c12",
     "approved_at": "2026-11-12T08:20:35+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-21-FB-EQ比能力重要嗎.md",
-    "lease_acquired_at": "2026-11-21T19:00:00.290065+08:00"
+    "post_ids": [
+      "18023717147733310",
+      "17934965901421985",
+      "17956326780320393",
+      "18123384854283976"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgAEqPeEZUY",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgAEqPeEZUY"
+    }
   },
   {
     "id": "b61b7700-1a03-477c-bec9-fa6fa3a11527",
