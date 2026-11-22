@@ -1958,7 +1958,7 @@
       }
     ],
     "scheduled_at": "2026-11-22T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-20T14:25:08+08:00",
     "published_at": null,
     "error": null,
@@ -1966,7 +1966,8 @@
     "approved_hash": "f9ca30d46ac9f9c6c66dfede297457113c41e005baccabc288dc61f377930752",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-22-Threads-試用期最後一週.md"
+    "source_draft": "2026-11-22-Threads-試用期最後一週.md",
+    "lease_acquired_at": "2026-11-22T11:00:00.513798+08:00"
   },
   {
     "id": "56146845-d462-4f8d-bdf0-9dc1309b3bc3",
