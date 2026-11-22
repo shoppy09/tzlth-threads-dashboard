@@ -1750,16 +1750,24 @@
       }
     ],
     "scheduled_at": "2026-11-22T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-19T21:19:44+08:00",
-    "published_at": null,
+    "published_at": "2026-11-22T19:00:41.938820+08:00",
     "error": null,
     "title": "公司開始省錢的 4 個訊號，你看到幾個？",
     "approved_hash": "727418a8120ea7747ffbc5f51b2842fd45e4ba2d5705a893429bd9ed488b74c0",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-22-FB-公司省錢的訊號.md",
-    "lease_acquired_at": "2026-11-22T19:00:00.473404+08:00"
+    "post_ids": [
+      "17917297620505245"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgCpdOSm60e",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgCpdOSm60e"
+    }
   },
   {
     "id": "05cecd3f-bf9a-46d4-90e3-1d2ee5183cb5",
