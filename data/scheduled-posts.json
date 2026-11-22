@@ -1750,7 +1750,7 @@
       }
     ],
     "scheduled_at": "2026-11-22T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-19T21:19:44+08:00",
     "published_at": null,
     "error": null,
@@ -1758,7 +1758,8 @@
     "approved_hash": "727418a8120ea7747ffbc5f51b2842fd45e4ba2d5705a893429bd9ed488b74c0",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-22-FB-公司省錢的訊號.md"
+    "source_draft": "2026-11-22-FB-公司省錢的訊號.md",
+    "lease_acquired_at": "2026-11-22T19:00:00.473404+08:00"
   },
   {
     "id": "05cecd3f-bf9a-46d4-90e3-1d2ee5183cb5",
