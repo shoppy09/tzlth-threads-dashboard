@@ -1958,16 +1958,29 @@
       }
     ],
     "scheduled_at": "2026-11-22T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-20T14:25:08+08:00",
-    "published_at": null,
+    "published_at": "2026-11-22T11:03:51.928957+08:00",
     "error": null,
     "title": "試用期最後一週才問自己過不過，通常已經晚了",
     "approved_hash": "f9ca30d46ac9f9c6c66dfede297457113c41e005baccabc288dc61f377930752",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-22-Threads-試用期最後一週.md",
-    "lease_acquired_at": "2026-11-22T11:00:00.513798+08:00"
+    "post_ids": [
+      "18002545935108085",
+      "18112269605191051",
+      "18115783534875362",
+      "18123618038085470",
+      "17901702759393769",
+      "17959064817275013"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgByhiqoKqd",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgByhiqoKqd"
+    }
   },
   {
     "id": "56146845-d462-4f8d-bdf0-9dc1309b3bc3",
