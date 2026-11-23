@@ -2021,7 +2021,7 @@
       }
     ],
     "scheduled_at": "2026-11-23T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-20T14:25:08+08:00",
     "published_at": null,
     "error": null,
@@ -2029,7 +2029,8 @@
     "approved_hash": "3f82f8ae6dd1e77605486530634688a0609ef1384e369f1cb4149d868af93f19",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-23-Threads-簡報第一分鐘.md"
+    "source_draft": "2026-11-23-Threads-簡報第一分鐘.md",
+    "lease_acquired_at": "2026-11-23T11:00:00.329656+08:00"
   },
   {
     "id": "ccedf0a3-173d-4be4-8653-7c2da06386ce",
