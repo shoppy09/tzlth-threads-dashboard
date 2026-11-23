@@ -2021,16 +2021,29 @@
       }
     ],
     "scheduled_at": "2026-11-23T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-20T14:25:08+08:00",
-    "published_at": null,
+    "published_at": "2026-11-23T11:04:03.462178+08:00",
     "error": null,
     "title": "簡報講到一半有人開始滑手機，問題多半出在第一分鐘",
     "approved_hash": "3f82f8ae6dd1e77605486530634688a0609ef1384e369f1cb4149d868af93f19",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-23-Threads-簡報第一分鐘.md",
-    "lease_acquired_at": "2026-11-23T11:00:00.329656+08:00"
+    "post_ids": [
+      "18101029523110826",
+      "18139239607734552",
+      "17956263762341973",
+      "18065550971805611",
+      "17992359000086469",
+      "18172371649483845"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgEXUbrjN0c",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgEXUbrjN0c"
+    }
   },
   {
     "id": "ccedf0a3-173d-4be4-8653-7c2da06386ce",
