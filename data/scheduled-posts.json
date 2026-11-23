@@ -1787,7 +1787,7 @@
       }
     ],
     "scheduled_at": "2026-11-23T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-19T21:19:44+08:00",
     "published_at": null,
     "error": null,
@@ -1795,7 +1795,8 @@
     "approved_hash": "d37fd2b3d6c97ffdcb2291b2bb9dcbb5a5c0108590cb490052ea009ef1800b1b",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-23-FB-手腳俐落的人.md"
+    "source_draft": "2026-11-23-FB-手腳俐落的人.md",
+    "lease_acquired_at": "2026-11-23T19:00:00.402702+08:00"
   },
   {
     "id": "dd2ef71c-f30d-4e55-aad0-814f27f675aa",
