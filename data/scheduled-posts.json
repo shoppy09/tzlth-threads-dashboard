@@ -1826,7 +1826,7 @@
       }
     ],
     "scheduled_at": "2026-11-24T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-19T21:19:44+08:00",
     "published_at": null,
     "error": null,
@@ -1834,7 +1834,8 @@
     "approved_hash": "d9e17ca2bdcaa8d46e84f1d590ee01ffd08db597a5602be6d4a951f735a7f087",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-24-FB-恰到好處的回饋.md"
+    "source_draft": "2026-11-24-FB-恰到好處的回饋.md",
+    "lease_acquired_at": "2026-11-24T19:00:00.361883+08:00"
   },
   {
     "id": "93717d93-8e06-4933-a284-2dd90c8ebf13",
