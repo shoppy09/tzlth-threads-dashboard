@@ -2086,16 +2086,29 @@
       }
     ],
     "scheduled_at": "2026-11-24T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-20T14:25:08+08:00",
-    "published_at": null,
+    "published_at": "2026-11-24T11:03:57.730561+08:00",
     "error": null,
     "title": "第三次離職之後，他才發現想走的理由一直跟著",
     "approved_hash": "5900b1880f9dd1f470a42742962dee4edb1e2ab0a582d88787f0fe70e9c0a112",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-24-Threads-想走的理由跟著走.md",
-    "lease_acquired_at": "2026-11-24T11:00:00.232016+08:00"
+    "post_ids": [
+      "17944000791385595",
+      "18004074864035941",
+      "17917597929519691",
+      "17966156058252525",
+      "17957577795296403",
+      "18121013939000355"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgG8HSREe40",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgG8HSREe40"
+    }
   },
   {
     "id": "bad5b4aa-143d-4601-b146-7985bb8de576",
