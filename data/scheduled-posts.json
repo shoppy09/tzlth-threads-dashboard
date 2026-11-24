@@ -1826,16 +1826,26 @@
       }
     ],
     "scheduled_at": "2026-11-24T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-19T21:19:44+08:00",
-    "published_at": null,
+    "published_at": "2026-11-24T19:01:57.503578+08:00",
     "error": null,
     "title": "恰到好處的回饋，或許才是推動團隊前進的關鍵",
     "approved_hash": "d9e17ca2bdcaa8d46e84f1d590ee01ffd08db597a5602be6d4a951f735a7f087",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-24-FB-恰到好處的回饋.md",
-    "lease_acquired_at": "2026-11-24T19:00:00.361883+08:00"
+    "post_ids": [
+      "18109579865459718",
+      "18360146485174252",
+      "18094006199701606"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgHzC5XG_gr",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgHzC5XG_gr"
+    }
   },
   {
     "id": "93717d93-8e06-4933-a284-2dd90c8ebf13",
