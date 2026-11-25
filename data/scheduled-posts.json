@@ -2151,16 +2151,29 @@
       }
     ],
     "scheduled_at": "2026-11-25T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-20T14:25:08+08:00",
-    "published_at": null,
+    "published_at": "2026-11-25T11:04:03.416614+08:00",
     "error": null,
     "title": "從同事變成主管，最難的不是管事",
     "approved_hash": "af231d5e2600806292ee3733b063b90c7982a69741e716a6a37ada5dacc10285",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-25-Threads-從同事變主管.md",
-    "lease_acquired_at": "2026-11-25T11:00:00.450353+08:00"
+    "post_ids": [
+      "18142808530628698",
+      "18118406267037580",
+      "18156363790471824",
+      "18025350155941336",
+      "17945971269379999",
+      "18108850397355321"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgJg6MoDYJZ",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgJg6MoDYJZ"
+    }
   },
   {
     "id": "70d61677-5ba9-4ef1-98cb-90638e7ec256",
