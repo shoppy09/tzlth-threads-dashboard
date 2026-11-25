@@ -2151,7 +2151,7 @@
       }
     ],
     "scheduled_at": "2026-11-25T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-20T14:25:08+08:00",
     "published_at": null,
     "error": null,
@@ -2159,7 +2159,8 @@
     "approved_hash": "af231d5e2600806292ee3733b063b90c7982a69741e716a6a37ada5dacc10285",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-25-Threads-從同事變主管.md"
+    "source_draft": "2026-11-25-Threads-從同事變主管.md",
+    "lease_acquired_at": "2026-11-25T11:00:00.450353+08:00"
   },
   {
     "id": "70d61677-5ba9-4ef1-98cb-90638e7ec256",
