@@ -1865,7 +1865,7 @@
       }
     ],
     "scheduled_at": "2026-11-25T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-19T21:19:44+08:00",
     "published_at": null,
     "error": null,
@@ -1873,7 +1873,8 @@
     "approved_hash": "f8dc2be9eb152a89acf19b017b58bd193118233712be4dd46ecd6775e49a781a",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-25-FB-寫信給用人主管.md"
+    "source_draft": "2026-11-25-FB-寫信給用人主管.md",
+    "lease_acquired_at": "2026-11-25T19:00:00.395512+08:00"
   },
   {
     "id": "28930c1f-60a9-44cc-bf80-0ee7b56b3210",
