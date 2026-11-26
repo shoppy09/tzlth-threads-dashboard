@@ -1904,7 +1904,7 @@
       }
     ],
     "scheduled_at": "2026-11-26T19:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-19T21:19:44+08:00",
     "published_at": null,
     "error": null,
@@ -1912,7 +1912,8 @@
     "approved_hash": "c9a4be24dd56afbc5aa4ed20ffbff9134875689a9a36c37cea691d36c2cb3e99",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
-    "source_draft": "2026-11-26-FB-跌倒後再站起來.md"
+    "source_draft": "2026-11-26-FB-跌倒後再站起來.md",
+    "lease_acquired_at": "2026-11-26T19:00:00.287664+08:00"
   },
   {
     "id": "5de87e53-8d8c-49fa-876d-f25771a1a7b1",
