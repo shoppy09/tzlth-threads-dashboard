@@ -1904,16 +1904,26 @@
       }
     ],
     "scheduled_at": "2026-11-26T19:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-19T21:19:44+08:00",
-    "published_at": null,
+    "published_at": "2026-11-26T19:01:57.247359+08:00",
     "error": null,
     "title": "一個人的卓越不在勝敗，在跌倒後又站起來",
     "approved_hash": "c9a4be24dd56afbc5aa4ed20ffbff9134875689a9a36c37cea691d36c2cb3e99",
     "approved_at": "2026-11-19T21:19:44+08:00",
     "source": "hq-fb-cross",
     "source_draft": "2026-11-26-FB-跌倒後再站起來.md",
-    "lease_acquired_at": "2026-11-26T19:00:00.287664+08:00"
+    "post_ids": [
+      "18142681285725212",
+      "18117435896275152",
+      "17932370040182551"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgM8opOm1rv",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgM8opOm1rv"
+    }
   },
   {
     "id": "5de87e53-8d8c-49fa-876d-f25771a1a7b1",
