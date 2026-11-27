@@ -2273,7 +2273,7 @@
       }
     ],
     "scheduled_at": "2026-11-27T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-20T14:25:08+08:00",
     "published_at": null,
     "error": null,
@@ -2281,7 +2281,8 @@
     "approved_hash": "d53044329c8e73543025ad1fcf44404ab3454c3dd0e93f712ec3b5f30d4a0082",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-27-Threads-空窗期三段話.md"
+    "source_draft": "2026-11-27-Threads-空窗期三段話.md",
+    "lease_acquired_at": "2026-11-27T11:00:00.279757+08:00"
   },
   {
     "id": "e5ad9699-e3f0-4e85-9500-f00fa37cb2ae",
