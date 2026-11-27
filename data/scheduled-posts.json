@@ -2273,16 +2273,27 @@
       }
     ],
     "scheduled_at": "2026-11-27T11:00:00+08:00",
-    "status": "in_progress",
+    "status": "published",
     "created_at": "2026-11-20T14:25:08+08:00",
-    "published_at": null,
+    "published_at": "2026-11-27T11:02:37.531986+08:00",
     "error": null,
     "title": "履歷上有空窗期，面試前先準備這 3 段話",
     "approved_hash": "d53044329c8e73543025ad1fcf44404ab3454c3dd0e93f712ec3b5f30d4a0082",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
     "source_draft": "2026-11-27-Threads-空窗期三段話.md",
-    "lease_acquired_at": "2026-11-27T11:00:00.279757+08:00"
+    "post_ids": [
+      "18097293341185641",
+      "18140200981728214",
+      "18107788331200930",
+      "18220775908360902"
+    ],
+    "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgOqf8LkZj1",
+    "readback": {
+      "ok": true,
+      "mismatch": [],
+      "permalink": "https://www.threads.com/@cda_pu_positive_thinking/post/DgOqf8LkZj1"
+    }
   },
   {
     "id": "e5ad9699-e3f0-4e85-9500-f00fa37cb2ae",
