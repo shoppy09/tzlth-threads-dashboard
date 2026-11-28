@@ -2336,7 +2336,7 @@
       }
     ],
     "scheduled_at": "2026-11-28T11:00:00+08:00",
-    "status": "pending",
+    "status": "in_progress",
     "created_at": "2026-11-20T14:25:08+08:00",
     "published_at": null,
     "error": null,
@@ -2344,7 +2344,8 @@
     "approved_hash": "3f6ead1169da4d17314bca752dd886abd306df80a5fa537a893dc5022b0368e1",
     "approved_at": "2026-11-20T14:25:08+08:00",
     "source": "hq-threads-approve",
-    "source_draft": "2026-11-28-Threads-調到冷門部門.md"
+    "source_draft": "2026-11-28-Threads-調到冷門部門.md",
+    "lease_acquired_at": "2026-11-28T11:00:00.320557+08:00"
   },
   {
     "id": "6b4bbf58-5b84-47b8-9e5b-4e93a8658bc7",
